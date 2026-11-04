@@ -1,3 +1,21 @@
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+
+# pipeline outputs
+runs/
+logs/
+selection/work/
+workshop_data/
+tests/sim/
+tests/run/
+tests/smoke.log
+__pycache__/
+jugfile.jugdata/
+subsets/
+tests/jugrun/
+tests/jugfile.jugdata/
+
+# PBS job stdout/stderr
+*.o[0-9]*
+*.e[0-9]*
