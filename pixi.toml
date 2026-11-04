@@ -1,0 +1,10 @@
+[workspace]
+authors = ["Luis Pedro Coelho <luis@luispedro.org>"]
+channels = ["conda-forge"]
+name = "metag-workshops"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
