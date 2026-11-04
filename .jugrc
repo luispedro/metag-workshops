@@ -1,0 +1,5 @@
+# file_keepalive: a worker killed by the 48 h walltime leaves its task marked
+# as failed (instead of a stale lock), see scripts/jug_submit.py
+[main]
+jugdir = file_keepalive:jugfile.jugdata
+will_cite = true
