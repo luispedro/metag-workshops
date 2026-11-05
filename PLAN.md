@@ -3,8 +3,9 @@
 This turns [GOALS.md](GOALS.md) into concrete steps. Everything runs in the
 pixi environment of this repository. The whole construction, from the
 full-data run to the validated toy dataset, is one [Jug](https://jug.readthedocs.io)
-task graph (`jugfile.py`); a provisioner (`scripts/jug_submit.py`) submits a
-right-sized aqua queue job (via `mqsub`/`qsub`) for each task once it is ready.
+task graph (`jugfile.py`); [jug_hpc](https://github.com/luispedro/jug_hpc)
+submits a right-sized aqua queue job for each task once it is ready, with the
+resources in `jug_hpc.toml`.
 
 ## Environment
 
@@ -42,7 +43,9 @@ copies in `/work/microbiome/db`:
 | file | what |
 |---|---|
 | `jugfile.py` | the task graph (below) and the dataset parameters (`SUBSET`) |
-| `scripts/jug_submit.py` | provisioner: submits one queue job per ready task (`jug execute --name TASK`) with the resources in its `RESOURCES` table |
+| `jug_hpc.toml` | resources of each task (one jug_hpc class per full-data step); `tests/jug_hpc.toml` for test mode |
+| `scripts/hpc/qsub` | `qsub` for jug_hpc inside the mqyolo sandbox (which has only `mqsub`): translates the `#PBS` header into `mqsub` options |
+| `scripts/hpc/worker_setup.sh` | run by every worker: activates the pixi environment |
 | `scripts/pipeline.sh` | the workshop pipeline, step by step (`qc_sr qc_lr profile_sr profile_lr assemble polish map bin checkm2 gunc appraise genes eggnog`); `--only STEP` runs one step; writes `timings.tsv`; can fake slow steps (below) |
 | `scripts/select_bins.py` | summarises bins (CheckM2, GUNC, depth, SingleM taxonomy) and proposes a selection |
 | `scripts/make_subset.sh` + `select_reads.py` | extract the workshop reads |
@@ -56,31 +59,45 @@ workshop commands are the ones that were validated. The commands in each
 ## Running it
 
 ```bash
-pixi run python scripts/jug_submit.py --watch     # keep running (e.g., in tmux) until done
-pixi run jug status                               # progress
-pixi run jug shell                                # value(validation)['report'], ...
+pixi run submit                   # keep running (e.g., in tmux) until done
+pixi run jug status               # progress
+pixi run jug shell                # value(validation)['report'], ...
 ```
 
-The provisioner checks Jug every 5 min and submits a worker job for each ready
-task that does not already have one (recorded in `logs/jug_workers.json`; worker
-logs in `logs/jug/`). Workers exit when their task is done. Jug keeps the
-results in `jugfile.jugdata/` (a `file_keepalive:` store, set in `.jugrc`), so
-the graph survives job limits, and the provisioner can be stopped and
-restarted at any time.
+`pixi run submit` runs `jug-hpc submit`, which polls Jug (every minute,
+backing off to 5 min while nothing changes) and submits a worker for each
+class with a ready task; each class (`jug_hpc.toml`) holds one task, so its
+worker runs that task and exits. jug_hpc's cluster settings (PBS, the `-P`
+project) are in `~/.config/jug_hpc/cluster.toml`. Jug keeps the results in
+`jugfile.jugdata/` (a `file_keepalive:` store, set in `jug_hpc.toml` and
+`.jugrc`), and jug_hpc keeps the jobs it submitted in `.jug_hpc/jobs.json`, so
+the submitter can be stopped and restarted at any time. Worker logs are in
+`logs/jug/<class>-<job>.log`, PBS's own in `logs/jug/scheduler/`. Before
+changing resources, check with `pixi run jug-hpc check` (which class runs
+which task) and `pixi run jug-hpc submit --dry-run` (the job scripts).
 
-Failures are not retried automatically: a task that raised an error, or whose
-worker was killed (e.g. at the 48 h walltime), shows as FAILED. Fix the
-cause, `pixi run jug cleanup --failed-only`, restart the provisioner. Jug does
-not notice changes to the scripts: after changing one,
+jug and jug_hpc are installed from git (`[pypi-dependencies]` in
+`pixi.toml`; jug_hpc needs features of jug that are not released yet);
+`pixi.lock` pins the commits.
+
+Failures are not retried automatically: the submitter stops (exit status 1)
+when only failed tasks are left, or when 3 jobs of a class in a row fail.
+A worker killed at the walltime leaves its task's lock, which the
+`file_keepalive:` store turns into a failure after 30 min. Read the log, fix
+the cause, `pixi run jug cleanup --failed-only`, restart `pixi run submit`.
+Jug does not notice changes to the scripts: after changing one,
 `pixi run jug invalidate --name TASK` (this also invalidates everything
 downstream).
 
-`--test` runs the same graph on the simulated community (`tests/jugrun/`,
-separate jugdir), as an end-to-end check before the multi-day full run:
+Test mode runs the same graph on the simulated community (`tests/jugrun/`,
+jugdir `tests/jugfile.jugdata/`, logs in `tests/logs/`; `tests/` is a separate
+jug_hpc project, with one 16-CPU class for all tasks), as an end-to-end check
+before the multi-day full run:
 
 ```bash
 pixi run bash tests/smoke_test.sh   # once, to simulate tests/sim/ (or submit it with mqsub)
-pixi run python scripts/jug_submit.py --test --watch --interval 1
+pixi run submit-test
+pixi run status-test
 ```
 
 ## The task graph
@@ -184,7 +201,7 @@ that size, so `timings.tsv` reflects the workshop machines. `validate` runs
    (above 30 the workshop becomes difficult; validation fails only then).
 
 A FAIL is a result (`value(validation)['passed']`), not a task error. Adjust
-`SUBSET` in `jugfile.py` and restart the provisioner until it passes:
+`SUBSET` in `jugfile.py` and run `pixi run submit` again until it passes:
 
 | problem | change |
 |---|---|

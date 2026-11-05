@@ -3,10 +3,10 @@
     full-data pipeline (one task per step of scripts/pipeline.sh)
         -> bin selection -> read extraction -> timed workshop run -> validation
 
-Do not run `jug execute` by hand on the login node: start the provisioner,
-which submits a right-sized queue job for each task as soon as it is ready:
+Do not run `jug execute` by hand on the login node: run jug_hpc, which submits
+a queue job (sized as in jug_hpc.toml) for each task as soon as it is ready:
 
-    pixi run python scripts/jug_submit.py --watch
+    pixi run submit             # e.g. in tmux; stops when everything is done
 
 Check progress with `pixi run jug status`; results with `pixi run jug shell`.
 
@@ -15,8 +15,9 @@ combination gets its own directory, subsets/<tag>/, so earlier attempts are
 kept and the full-data tasks are not rerun. To choose the bins by hand, write
 them (one per line) to selection_manual.txt; editing it changes the tag.
 
-Test mode (WS_TEST=1, used by `jug_submit.py --test`): the same graph on the
-simulated community from tests/smoke_test.sh, under tests/jugrun/.
+Test mode (WS_TEST=1, set by `pixi run submit-test` and tests/jug_hpc.toml):
+the same graph on the simulated community from tests/smoke_test.sh, under
+tests/jugrun/.
 
 Tasks run the scripts in scripts/; Jug does not notice changes to those
 scripts: after changing one, `jug invalidate --name <task>` the affected tasks.
@@ -52,11 +53,14 @@ SUBSET = {
 MANUAL_SELECTION = 'selection_manual.txt'
 
 # The workshop run is timed, so it gets a fixed number of threads matching the
-# machines participants will use (the provisioner gives it this many CPUs).
+# machines participants will use (its jug_hpc class has this many CPUs).
 WORKSHOP_THREADS = 16
 
 if os.environ.get('WS_TEST'):
-    FULL_INPUTS = [timed_path(f'tests/sim/sample_{r}.fq.gz') for r in ('R1', 'R2', 'ont')]
+    # absolute: in test mode, the jugfile is loaded from tests/ (jug_hpc's
+    # project directory, tests/jug_hpc.toml)
+    FULL_INPUTS = [timed_path(os.path.join(REPO, f'tests/sim/sample_{r}.fq.gz'))
+                   for r in ('R1', 'R2', 'ont')]
     OUT = 'tests/jugrun'
     FULL_RUN = f'{OUT}/full'
     SUBSET = dict(SUBSET, n_bins=2, min_completeness=80, max_depth_sr=20, max_depth_lr=15,
@@ -65,8 +69,8 @@ if os.environ.get('WS_TEST'):
 
 
 def threads():
-    """CPUs of the queue job running this task (set by jug_submit.py)."""
-    return int(os.environ.get('WS_THREADS') or os.environ.get('NCPUS') or 4)
+    """CPUs of the queue job running this task (set by jug_hpc)."""
+    return int(os.environ.get('JUG_HPC_CPUS') or os.environ.get('NCPUS') or 4)
 
 
 def sh(*cmd):

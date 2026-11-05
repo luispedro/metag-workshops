@@ -14,6 +14,12 @@ GUNC_DB = "/work/microbiome/db/gunc/1.0.1/gunc_db_2.0.4.dmnd"
 EGGNOG_DATA_DIR = "/work/microbiome/db/eggnog-mapper/2.1.12"
 
 [tasks]
+# jug_hpc (jug_hpc.toml) submits the jugfile's tasks to the queue. Inside the
+# mqyolo sandbox there is no qsub: scripts/hpc/qsub submits through mqsub.
+submit = { cmd = "jug-hpc submit", env = { PATH = "$PIXI_PROJECT_ROOT/scripts/hpc:$PATH", MQSUB_CWD = "$PIXI_PROJECT_ROOT" } }
+# end-to-end test on the simulated data (tests/jug_hpc.toml)
+submit-test = { cmd = "jug-hpc -C tests submit", env = { WS_TEST = "1", PATH = "$PIXI_PROJECT_ROOT/scripts/hpc:$PATH", MQSUB_CWD = "$PIXI_PROJECT_ROOT" } }
+status-test = { cmd = "jug status --jugdir file_keepalive:tests/jugfile.jugdata jugfile.py", env = { WS_TEST = "1" } }
 
 [dependencies]
 fastp = ">=1.4.0,<2"
@@ -31,7 +37,13 @@ seqkit = ">=2.14.0,<3"
 myloasm = ">=0.7.0,<0.8"
 skani = ">=0.4.0,<0.5"
 pandas = ">=3.0.6,<4"
-jug = ">=2.7.0,<3"
+
+# jug from main (jug execute --exclude-name, JUG_MAX_SECONDS), used by jug_hpc,
+# which submits the jugfile's tasks to the queue (jug_hpc.toml). pixi.lock pins
+# the commits.
+[pypi-dependencies]
+jug = { git = "https://github.com/luispedro/jug", branch = "main" }
+jug_hpc = { git = "https://github.com/luispedro/jug_hpc", branch = "main" }
 
 # eggnog-mapper 2.1.15 needs diamond <2.1 while gunc 1.1.1 needs diamond 2.1.24,
 # so it lives in its own environment: `pixi run -e eggnog emapper.py ...`

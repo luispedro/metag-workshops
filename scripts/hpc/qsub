@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+"""qsub for jug_hpc inside the mqyolo sandbox: submits through mqsub.
+
+The sandbox has no qsub, only mqsub (which forwards to the host and runs the
+job in the same sandbox on the compute node). jug_hpc's PBS backend runs
+`qsub SCRIPT` and reads the job ID from its output, so this translates the
+script's #PBS header into mqsub options, submits the script with
+`mqsub --bg --script`, and prints the job ID.
+
+`pixi run submit` puts this directory first on PATH for `jug-hpc` only.
+mqsub writes its own job header, so the #PBS lines in the script are ignored
+by PBS itself; everything jug_hpc writes there must be translated below (an
+unknown option is an error, not silently dropped).
+
+The job is submitted from $MQSUB_CWD (default: the current directory), which
+is the directory that the job's sandbox can write to.
+"""
+import math
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+SELF = os.path.dirname(os.path.abspath(__file__))
+
+
+def real_qsub(argv):
+    """Not a single script (or called from mqsub itself): use the next qsub on PATH"""
+    path = os.pathsep.join(p for p in os.environ.get('PATH', '').split(os.pathsep)
+                           if p and os.path.abspath(p) != SELF)
+    qsub = shutil.which('qsub', path=path)
+    if qsub is None:
+        sys.exit(f'qsub (mqsub shim): cannot handle {argv!r} and there is no other qsub')
+    os.execv(qsub, [qsub, *argv])
+
+
+def memory_gb(text):
+    m = re.fullmatch(r'(\d+)([kmgt]?)b', text.lower())
+    if not m:
+        sys.exit(f'qsub (mqsub shim): cannot parse memory {text!r}')
+    scale = {'': 1, 'k': 2**10, 'm': 2**20, 'g': 2**30, 't': 2**40}[m[2]]
+    return max(1, math.ceil(int(m[1]) * scale / 2**30))
+
+
+def hours(text):
+    h, m, s = (int(x) for x in text.split(':'))
+    return max(1, math.ceil((h * 3600 + m * 60 + s) / 3600))
+
+
+def mqsub_options(script):
+    """mqsub options for the #PBS header of `script`"""
+    opts = []
+    directives = []  # mqsub keeps only the last --directive: one #PBS line for all
+    with open(script) as f:
+        header = [line.strip()[len('#PBS'):].strip() for line in f
+                  if line.strip().startswith('#PBS')]
+    for d in header:
+        flag, _, arg = d.partition(' ')
+        arg = arg.strip()
+        if flag == '-N':
+            opts += ['--name', arg]
+        elif flag == '-l' and arg.startswith('select='):
+            chunk = arg[len('select='):].split(':')
+            if chunk[0] != '1':
+                sys.exit(f'qsub (mqsub shim): only one chunk is supported: {d!r}')
+            for item in chunk[1:]:
+                k, _, v = item.partition('=')
+                if k == 'ncpus':
+                    opts += ['-t', v]
+                elif k == 'mem':
+                    opts += ['-m', str(memory_gb(v))]
+                else:
+                    directives.append(f'-l {k}={v}')
+        elif flag == '-l' and arg.startswith('walltime='):
+            # mqsub takes whole hours: round up
+            opts += ['--hours', str(hours(arg[len('walltime='):]))]
+        elif flag == '-l':
+            directives.append(f'-l {arg}')
+        elif flag == '-q':
+            opts += ['-q', arg]
+        elif flag == '-P':
+            opts += ['-P', arg]
+        elif flag == '-J':
+            m = re.fullmatch(r'1-(\d+)', arg)
+            if not m:
+                sys.exit(f'qsub (mqsub shim): unsupported array {d!r}')
+            opts += ['--array', m[1]]
+        elif flag in ('-o', '-e'):
+            # relative to where jug-hpc runs qsub (the project directory)
+            directives.append(f'{flag} {os.path.abspath(arg)}/')
+        elif flag == '-m':
+            pass  # mqsub --no-email
+        else:
+            directives.append(d)
+    if directives:
+        opts += ['--directive', ' '.join(directives)]
+    return opts
+
+
+def main(argv):
+    if len(argv) != 1 or argv[0].startswith('-') or os.environ.get('MQSUB_QSUB_SHIM'):
+        real_qsub(argv)
+    script = os.path.abspath(argv[0])
+    cmd = ['mqsub', '--no-email', '--bg', '--no-executable-check',
+           *mqsub_options(script), '--script', script]
+    env = dict(os.environ, MQSUB_QSUB_SHIM='1')
+    r = subprocess.run(cmd, capture_output=True, text=True, env=env,
+                       cwd=os.environ.get('MQSUB_CWD') or None)
+    out = r.stdout + r.stderr
+    m = re.search(r'qsub stdout: *(\S+)', out)
+    if r.returncode != 0 or not m:
+        sys.stderr.write(f'qsub (mqsub shim): {" ".join(cmd)} failed:\n{out}')
+        sys.exit(r.returncode or 1)
+    print(m[1])
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

@@ -1,0 +1,100 @@
+# Resources for the jugfile's tasks, used by jug_hpc (`pixi run submit`).
+# Cluster settings (scheduler, project) are in ~/.config/jug_hpc/cluster.toml.
+# Each class has a single task (one per step of the full-data pipeline), so a
+# worker runs that task and exits; `time` is the task's wall time (aqua: at
+# most 48 h). Test mode uses tests/jug_hpc.toml instead.
+jugfile = "jugfile.py"
+jugdir  = "file_keepalive:jugfile.jugdata"   # same as .jugrc (for `jug status`)
+logs    = "logs/jug"
+setup   = "source scripts/hpc/worker_setup.sh"
+
+[default]               # select_bins, validate
+cpus   = 4
+memory = "16G"
+time   = "1h"
+
+[class.qc_sr]
+match  = "full_qc_sr"
+cpus   = 16
+memory = "32G"
+time   = "24h"
+
+[class.qc_lr]
+match  = "full_qc_lr"
+cpus   = 16
+memory = "32G"
+time   = "48h"
+
+[class.profile_sr]
+match  = "full_profile_sr"
+cpus   = 32
+memory = "64G"
+time   = "48h"
+
+[class.profile_lr]
+match  = "full_profile_lr"
+cpus   = 32
+memory = "64G"
+time   = "48h"
+
+[class.assemble]
+match  = "full_assemble"
+cpus   = 64
+memory = "500G"
+time   = "48h"
+
+[class.polish]
+match  = "full_polish"
+cpus   = 64
+memory = "128G"
+time   = "48h"
+
+[class.map]
+match  = "full_map"
+cpus   = 64
+memory = "128G"
+time   = "48h"
+
+[class.bin]
+match  = "full_bin"
+cpus   = 32
+memory = "128G"
+time   = "48h"
+
+[class.checkm2]
+match  = "full_checkm2"
+cpus   = 32
+memory = "128G"
+time   = "24h"
+
+[class.gunc]
+match  = "full_gunc"
+cpus   = 32
+memory = "128G"
+time   = "24h"
+
+[class.appraise]
+match  = "full_appraise"
+cpus   = 32
+memory = "64G"
+time   = "24h"
+
+[class.map_lr]
+match  = "full_map_lr"
+cpus   = 32
+memory = "64G"
+time   = "48h"
+
+[class.make_subset]
+match  = "make_subset"
+cpus   = 16
+memory = "64G"
+time   = "24h"
+
+# The timed run: CPUs as on the workshop machines (WORKSHOP_THREADS in
+# jugfile.py, which sets the pipeline's threads).
+[class.workshop_run]
+match  = "workshop_run"
+cpus   = 16
+memory = "64G"
+time   = "4h"

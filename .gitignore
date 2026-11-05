@@ -15,6 +15,7 @@ jugfile.jugdata/
 subsets/
 tests/jugrun/
 tests/jugfile.jugdata/
+tests/logs/
 
 # PBS job stdout/stderr
 *.o[0-9]*

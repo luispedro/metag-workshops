@@ -1,0 +1,14 @@
+# Test mode (`pixi run submit-test`): the same jugfile on the simulated
+# community from tests/smoke_test.sh (WS_TEST=1), with its own jugdir
+# (tests/jugfile.jugdata) and outputs (tests/jugrun/). Small data: every task
+# fits in one 16-CPU worker, so there is only the default class.
+jugfile = "../jugfile.py"
+jugdir  = "file_keepalive:jugfile.jugdata"
+logs    = "logs"
+setup   = "export WS_TEST=1; source ../scripts/hpc/worker_setup.sh"
+
+[default]
+cpus    = 16                # = WORKSHOP_THREADS (the timed workshop run)
+memory  = "64G"
+time    = "4h"
+workers = 3
