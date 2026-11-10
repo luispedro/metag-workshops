@@ -1,7 +1,8 @@
 # Resources for the jugfile's tasks, used by jug_hpc (`pixi run submit`).
 # Cluster settings (scheduler, project) are in ~/.config/jug_hpc/cluster.toml.
-# Each class has a single task (one per step of the full-data pipeline), so a
-# worker runs that task and exits; `time` is the task's wall time (aqua: at
+# Each class has a single task (one per step of the full-data pipeline; but
+# polish_aln has two, R1 and R2, with a worker each), so a worker runs that
+# task and exits; `time` is the task's wall time (aqua: at
 # most 48 h). Test mode uses tests/jug_hpc.toml instead.
 jugfile = "jugfile.py"
 jugdir  = "file_keepalive:jugfile.jugdata"   # same as .jugrc (for `jug status`)
@@ -43,21 +44,30 @@ cpus   = 64
 memory = "500G"
 time   = "48h"
 
+# bwa mem -a, one task per read end (the draft's index is ~15 GB), in parallel
+[class.polish_aln]
+match   = "full_polish_aln"
+cpus    = 12
+memory  = "24G"
+time    = "24h"
+workers = 2
+
+# polypolish (single-threaded, but holds the alignments in memory)
 [class.polish]
 match  = "full_polish"
-cpus   = 64
-memory = "128G"
-time   = "48h"
+cpus   = 12
+memory = "768G"
+time   = "24h"
 
 [class.map]
 match  = "full_map"
-cpus   = 64
-memory = "128G"
+cpus   = 40
+memory = "48G"
 time   = "48h"
 
 [class.bin]
 match  = "full_bin"
-cpus   = 32
+cpus   = 12
 memory = "128G"
 time   = "48h"
 

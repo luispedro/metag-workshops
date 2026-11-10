@@ -115,6 +115,11 @@ def full_assemble(inputs, _after):
     return pipeline_step('assemble', inputs)
 
 @TaskGenerator
+def full_polish_aln(inputs, read, _after):
+    """`bwa mem -a` of one read end (read: 'r1' or 'r2') vs. the draft"""
+    return pipeline_step(f'polish_aln_{read}', inputs)
+
+@TaskGenerator
 def full_polish(inputs, _after):
     # --cleanup removes the (very large) `bwa mem -a` SAM files afterwards
     return pipeline_step('polish', inputs, '--cleanup')
@@ -210,7 +215,8 @@ qc_lr = full_qc_lr(FULL_INPUTS)
 profile_sr = full_profile_sr(FULL_INPUTS, qc_sr)
 profile_lr = full_profile_lr(FULL_INPUTS, qc_lr)
 assembled = full_assemble(FULL_INPUTS, qc_lr)
-polished = full_polish(FULL_INPUTS, [assembled, qc_sr])
+polish_aln = [full_polish_aln(FULL_INPUTS, read, [assembled, qc_sr]) for read in ('r1', 'r2')]
+polished = full_polish(FULL_INPUTS, polish_aln)
 mapped = full_map(FULL_INPUTS, polished)
 binned = full_bin(FULL_INPUTS, mapped)
 checkm2 = full_checkm2(FULL_INPUTS, binned)

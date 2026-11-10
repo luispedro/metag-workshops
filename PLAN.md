@@ -46,7 +46,7 @@ copies in `/work/microbiome/db`:
 | `jug_hpc.toml` | resources of each task (one jug_hpc class per full-data step); `tests/jug_hpc.toml` for test mode |
 | `scripts/hpc/qsub` | `qsub` for jug_hpc inside the mqyolo sandbox (which has only `mqsub`): translates the `#PBS` header into `mqsub` options |
 | `scripts/hpc/worker_setup.sh` | run by every worker: activates the pixi environment |
-| `scripts/pipeline.sh` | the workshop pipeline, step by step (`qc_sr qc_lr profile_sr profile_lr assemble polish map bin checkm2 gunc appraise genes eggnog`); `--only STEP` runs one step; writes `timings.tsv`; can fake slow steps (below) |
+| `scripts/pipeline.sh` | the workshop pipeline, step by step (`qc_sr qc_lr profile_sr profile_lr assemble polish_aln_r1 polish_aln_r2 polish map bin checkm2 gunc appraise genes eggnog`); `--only STEP` runs one step; writes `timings.tsv`; can fake slow steps (below) |
 | `scripts/select_bins.py` | summarises bins (CheckM2, GUNC, depth, SingleM taxonomy) and proposes a selection |
 | `scripts/make_subset.sh` + `select_reads.py` | extract the workshop reads |
 | `scripts/validate.py` | compares the workshop run with the full run (GOALS step 5) |
@@ -103,12 +103,12 @@ pixi run status-test
 ## The task graph
 
 ```
-full_qc_sr ─┬────────────────────── full_profile_sr ───────────┐
-full_qc_lr ─┼─ full_profile_lr ─────────────────────────── full_appraise ─┐
-            └─ full_assemble ─ full_polish ─ full_map ─ full_bin ─┬─ full_checkm2 ─┤
-              (full_qc_sr ──┘)  └─ full_map_lr ─┐                 └─ full_gunc ────┤
-                                                │                                  │
-                         make_subset ◄──────────┴───────────── select_bins ◄───────┘
+full_qc_sr ─┬────────────────────── full_profile_sr ─────────────────────────────┐
+full_qc_lr ─┼─ full_profile_lr ───────────────────────────────────────────── full_appraise ─┐
+            └─ full_assemble ─┬─ full_polish_aln(r1) ─┬─ full_polish ─ full_map ─ full_bin ─┬─ full_checkm2 ─┤
+              (full_qc_sr ──┘)└─ full_polish_aln(r2) ─┘   └─ full_map_lr ─┐                 └─ full_gunc ────┤
+                                                                          │                                  │
+                                           make_subset ◄──────────────────┴───────────── select_bins ◄───────┘
                               │
                          workshop_run ── validate
 ```
@@ -118,8 +118,10 @@ full_qc_lr ─┼─ full_profile_lr ──────────────�
 | full_qc_sr / full_qc_lr | 16 | 32 | 24 / 48 |
 | full_profile_sr / full_profile_lr | 32 | 64 | 48 |
 | full_assemble | 64 | 500 | 48 |
-| full_polish / full_map | 64 | 128 | 48 |
-| full_bin | 32 | 128 | 48 |
+| full_polish_aln (×2: R1, R2) | 12 | 24 | 24 |
+| full_polish (polypolish) | 12 | 768 | 24 |
+| full_map | 40 | 48 | 48 |
+| full_bin | 12 | 128 | 48 |
 | full_checkm2 / full_gunc / full_appraise | 32 | 128 / 128 / 64 | 24 |
 | full_map_lr | 32 | 64 | 48 |
 | select_bins / validate | 1 / 4 | 8 / 16 | 1 |
@@ -129,7 +131,10 @@ full_qc_lr ─┼─ full_profile_lr ──────────────�
 ### 1. Full pipeline on the full data (`full_*` tasks)
 
 Each task runs `pipeline.sh --only STEP` into `runs/full/` (no annotation;
-polishing uses `--cleanup` to delete the large `bwa mem -a` SAM files).
+`full_polish` uses `--cleanup` to delete the large `bwa mem -a` SAM files).
+The draft is indexed by `full_assemble`, so the two `full_polish_aln` tasks
+(R1 and R2) run in parallel; `full_polish` (polypolish) then gets a job with
+few CPUs and much memory.
 `full_map_lr` maps the raw ONT reads to the polished assembly with minimap2
 (needed for step 3), in parallel with binning.
 

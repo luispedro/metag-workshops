@@ -10,10 +10,10 @@
 #       [--precomputed RUN --fake STEP,...]
 #
 # Steps (in order):
-#   qc_sr qc_lr profile_sr profile_lr assemble polish map bin
-#   checkm2 gunc appraise genes eggnog
+#   qc_sr qc_lr profile_sr profile_lr assemble polish_aln_r1 polish_aln_r2
+#   polish map bin checkm2 gunc appraise genes eggnog
 # --only runs a single step (used to split the full-data run into queue jobs,
-# see scripts/submit.sh); the steps it needs must already be done.
+# see jugfile.py); the steps it needs must already be done.
 # Each finished step is recorded in OUTDIR/.done/STEP; rerunning skips it,
 # so a killed job can simply be resubmitted. Per-step wall-clock time and peak
 # memory go to OUTDIR/timings.tsv.
@@ -24,8 +24,8 @@
 set -euo pipefail
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
-STEPS=(qc_sr qc_lr profile_sr profile_lr assemble polish map bin
-       checkm2 gunc appraise genes eggnog)
+STEPS=(qc_sr qc_lr profile_sr profile_lr assemble polish_aln_r1 polish_aln_r2
+       polish map bin checkm2 gunc appraise genes eggnog)
 THREADS=8
 UNTIL=eggnog
 CLEANUP=0
@@ -112,20 +112,29 @@ step_profile_lr() {
         --threads "$THREADS"
 }
 
-# 3a. Long-read assembly
+# 3a. Long-read assembly (indexed here for the polishing alignments, which
+# are two independent steps)
 step_assemble() {
     myloasm qc/lr.fq.gz -o assembly/myloasm -t "$THREADS"
     [[ -s assembly/myloasm/assembly_primary.fa ]] || {
         echo "myloasm did not produce assembly_primary.fa" >&2; return 1; }
     ln -sf myloasm/assembly_primary.fa assembly/draft.fa
+    bwa index assembly/draft.fa
 }
 
-# 3b. Short-read polishing (each read end mapped separately, all alignments)
-step_polish() {
+# 3b. Short-read polishing: each read end mapped separately, all alignments
+# (the two alignment steps can run at the same time), then polypolish
+step_polish_aln_r1() {
     mkdir -p polish
-    bwa index assembly/draft.fa
     bwa mem -t "$THREADS" -a assembly/draft.fa qc/sr_R1.fq.gz > polish/aln_R1.sam
+}
+
+step_polish_aln_r2() {
+    mkdir -p polish
     bwa mem -t "$THREADS" -a assembly/draft.fa qc/sr_R2.fq.gz > polish/aln_R2.sam
+}
+
+step_polish() {
     polypolish filter \
         --in1 polish/aln_R1.sam --in2 polish/aln_R2.sam \
         --out1 polish/filtered_R1.sam --out2 polish/filtered_R2.sam
@@ -222,8 +231,10 @@ outputs_of() {
         qc_lr) echo qc/lr.* qc/fastplong.* ;;
         profile_sr) echo profile/sr.* ;;
         profile_lr) echo profile/lr.* ;;
-        assemble) echo assembly/myloasm assembly/draft.fa ;;
-        polish) echo polish assembly/draft.fa.* assembly/polished.fa ;;
+        assemble) echo assembly/myloasm assembly/draft.fa assembly/draft.fa.* ;;
+        polish_aln_r1) echo polish/aln_R1.sam ;;
+        polish_aln_r2) echo polish/aln_R2.sam ;;
+        polish) echo polish assembly/polished.fa ;;
         map) echo mapping assembly/polished.fa.* ;;
         bin) echo binning ;;
         checkm2) echo binqc/checkm2 ;;
