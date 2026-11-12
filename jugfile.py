@@ -46,8 +46,9 @@ SUBSET = {
     'min_completeness': 90,
     'max_contamination': 5,
     'max_depth_sr': 60,
-    'max_depth_lr': 40,
-    'background': 0.01,
+    # 0.01 background gave 40 bins (73% of the proteins) and a 45 min run
+    'max_depth_lr': 25,
+    'background': 0.002,
     'seed': 'workshop',
 }
 MANUAL_SELECTION = 'selection_manual.txt'

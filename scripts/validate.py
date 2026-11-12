@@ -29,8 +29,18 @@ EXPECTED = [
     'mapping/sr.sorted.bam', 'binning/contig_bins.tsv',
     'binqc/checkm2/quality_report.tsv', 'binqc/bins.profile.tsv',
     'binqc/appraise_sr.txt', 'binqc/appraise_lr.txt',
-    'annotation/all_bins.faa', 'annotation/eggnog/all_bins.emapper.annotations',
+    'annotation/all_bins.faa', 'annotation/eggnog/mag.txt',
 ]
+
+
+def eggnog_output(run):
+    """eggNOG-mapper annotates a single MAG (named in mag.txt), see pipeline.sh"""
+    try:
+        with open(os.path.join(run, 'annotation/eggnog/mag.txt')) as f:
+            mag = f.read().strip()
+    except FileNotFoundError:
+        return 'annotation/eggnog/<MAG>.emapper.annotations'
+    return f'annotation/eggnog/{mag}.emapper.annotations'
 
 
 def quality(run):
@@ -114,7 +124,7 @@ def main():
     lines.append('')
 
     lines += ['## 3. Expected outputs', '']
-    missing = [f for f in EXPECTED
+    missing = [f for f in EXPECTED + [eggnog_output(args.workshop)]
                if not os.path.exists(os.path.join(args.workshop, f))
                or os.path.getsize(os.path.join(args.workshop, f)) == 0]
     ok &= not missing

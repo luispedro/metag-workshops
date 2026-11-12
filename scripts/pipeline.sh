@@ -197,7 +197,7 @@ step_appraise() {
     done
 }
 
-# 5. Gene prediction (per bin) and functional annotation
+# 5. Gene prediction (per bin) and functional annotation (of one MAG)
 step_genes() {
     mkdir -p annotation/genes
     : > annotation/all_bins.faa
@@ -212,13 +212,22 @@ step_genes() {
     done
 }
 
+# eggNOG-mapper takes ~15 min for all bins, too long for the workshop: here
+# we annotate a single MAG, the best one by CheckM2 (highest completeness -
+# 5 x contamination). The same command works for any other bin (or for
+# annotation/all_bins.faa, all bins together) given more time.
 step_eggnog() {
     mkdir -p annotation/eggnog
+    local mag
+    mag=$(awk -F'\t' 'NR > 1 { s = $2 - 5 * $3; if (best == "" || s > max) { max = s; best = $1 } }
+                      END { print best }' binqc/checkm2/quality_report.tsv)
+    echo "Annotating $mag"
+    echo "$mag" > annotation/eggnog/mag.txt
     pixi run --frozen --manifest-path "$REPO/pixi.toml" -e eggnog emapper.py \
-        -i annotation/all_bins.faa --itype proteins \
+        -i annotation/genes/$mag.faa --itype proteins \
         -m diamond \
         --data_dir "$EGGNOG_DATA_DIR" \
-        -o all_bins --output_dir annotation/eggnog \
+        -o "$mag" --output_dir annotation/eggnog \
         --temp_dir "$TMP" \
         --cpu "$THREADS" --override
 }

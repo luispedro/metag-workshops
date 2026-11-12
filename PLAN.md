@@ -212,6 +212,12 @@ A FAIL is a result (`value(validation)['passed']`), not a task error. Adjust
 |---|---|
 | too slow, everything scales with read count | lower `max_depth_sr/_lr` (but keep ≥ ~20× LR for myloasm and ≥ ~15× SR for polishing) |
 | too slow in eggNOG-mapper / GUNC / CheckM2 | fewer bins (`n_bins`), or `--sensmode fast` for emapper |
+
+eggNOG-mapper annotates a single MAG (the best by CheckM2, written to
+`annotation/eggnog/mag.txt`), not all bins: on all 40 bins of the first
+subset (`6549321d`: background 0.01, LR cap 40×) it took 15 of the 45 min.
+The workshop explains that this is for time reasons. That run also led to
+lowering `background` to 0.002 and `max_depth_lr` to 25.
 | a selected bin falls apart | raise its depth cap, or swap it for another bin from the same stratum |
 | too clean (no unbinned contigs, no extra taxa) | raise `background` |
 | background produces bins that hurt runtime | lower `background` |
