@@ -61,9 +61,9 @@ time   = "24h"
 
 [class.map]
 match  = "full_map"
-cpus   = 40
-memory = "48G"
-time   = "48h"
+cpus   = 12
+memory = "60G"
+time   = "20h"
 
 [class.bin]
 match  = "full_bin"
