@@ -123,3 +123,51 @@ minutes** of wall-clock time in the provided environment, and ideally less.
 Database setup is excluded. The likely bottlenecks are eggNOG-mapper, GUNC, and
 assembly. The number of bins (~5) is a starting point that should be adjusted
 based on measured runtimes.
+
+
+## Workshop support data & tools
+
+For supporting the workshop, we want to provide a pre-prepared AWS machine with
+(1) the data, (2) installed software and databases, (3) precomputed versions of
+the outputs. It is one large machine shared by all participants, each with
+their own user account; data, software, databases and precomputed outputs are
+in shared (read-only) paths.
+
+The workshop will have different steps with substeps:
+
+1. Get data
+2. Read QC (2.1: short; 2.2: long)
+3. SingleM (3.1: short; 3.2: long)
+4. Assembly
+5. Polish (5.1: mapping; 5.2: polish)
+6. Mapping
+7. Binning
+8. CheckM2
+9. GUNC
+10. SingleM appraise
+11. Gene prediction (pyrodigal)
+12. eggNOG-mapper
+
+To enable this, we want to add a special command, `metag-ws`, which has the
+following subcommands:
+
+```
+metag-ws show-cmd [STEP]
+metag-ws explain-cmd [STEP]
+metag-ws results-for [STEP]
+```
+
+Without a step, it shows a menu with the steps. It remembers (per user) the
+last step used and highlights it; the next step is the default choice.
+
+`show-cmd` prints the command. `explain-cmd` shows an annotated version of the
+command with the different arguments explained. `results-for` brings in the
+precomputed results of all steps up to and including the chosen one, and
+prints a note that these may not be exactly the same as the participant's own
+results (e.g., bin names and numbers can differ between runs).
+
+Each step has its own numbered folder (`01_DATA`, `02_QC`, `03_SINGLEM`, ...).
+Precomputed results never overwrite the participant's own files: they go into
+separate folders (`02_QC_precomputed`, ...).
+
+Use Python to implement the tool and pixi to install all dependencies.

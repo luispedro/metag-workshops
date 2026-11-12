@@ -1,259 +1,233 @@
-# Plan: building the workshop dataset
+# Plan
 
-This turns [GOALS.md](GOALS.md) into concrete steps. Everything runs in the
-pixi environment of this repository. The whole construction, from the
-full-data run to the validated toy dataset, is one [Jug](https://jug.readthedocs.io)
-task graph (`jugfile.py`); [jug_hpc](https://github.com/luispedro/jug_hpc)
-submits a right-sized aqua queue job for each task once it is ready, with the
-resources in `jug_hpc.toml`.
+This turns [GOALS.md](GOALS.md) into concrete steps.
 
-## Environment
+## Status
 
-`pixi install --all` creates two environments (latest bioconda releases as of
-2026-11-04):
+**The workshop dataset is built and validated** (GOALS Part 2): subset
+`9ca3c728` (5 selected bins, background 0.002, depth caps 60× SR / 25× LR,
+eggNOG-mapper on the best MAG only), validation PASS, workshop run 24.8 min
+on 16 threads. Details and per-step times are in [TIMING.md](TIMING.md).
 
-| tool | version | env |
-|---|---|---|
-| fastp / fastplong | 1.4.0 / 0.7.1 | default |
-| SingleM | 0.21.4 | default |
-| myloasm | 0.7.0 | default |
-| bwa / polypolish / samtools | 0.7.19 / 0.7.1 / 1.25 | default |
-| SemiBin2 | 2.6.0 | default |
-| CheckM2 / GUNC | 1.1.0 / 1.1.1 | default |
-| pyrodigal | 3.7.1 | default |
-| eggNOG-mapper | 2.1.15 | `eggnog` |
-| minimap2, seqkit, skani, pandas | 2.31, 2.14.0, 0.4.0, 3.0.6 | default (dataset construction only) |
+* data: `subsets/9ca3c728/workshop_data/` (`sample_R1.fq.gz`,
+  `sample_R2.fq.gz`, `sample_ont.fq.gz`, 1.2 GB)
+* reference run (the future precomputed results): `subsets/9ca3c728/run/`
 
-eggNOG-mapper 2.1.15 requires diamond <2.1, and GUNC 1.1.1 requires diamond
-2.1.24, so eggNOG-mapper has its own environment (`pixi run -e eggnog
-emapper.py ...`).
+Still open from the dataset work:
 
-Databases are set in `pixi.toml` (`[activation.env]`) and point to the shared
-copies in `/work/microbiome/db`:
+* **15-minute target**: 24.8 min is above the target (below the 30 min hard
+  limit). The remaining cost is mostly fixed (GUNC 5.3 min, eggNOG-mapper
+  4.0 min, DB loading). `metag-ws jump-to` (below) makes this less critical:
+  participants can skip a slow step instead of waiting.
+* **CheckM2 database**: the shared DB is the 2021 version; CheckM2 1.1.0
+  recommends DB v3 (doi:10.5281/zenodo.14897628). Install it for the AWS
+  machine and rerun the reference run with it.
 
-| variable | database |
-|---|---|
-| `SINGLEM_METAPACKAGE_PATH` | S6.5.0 GTDB r232 (S7.5.0 needs a newer SingleM than 0.21.4, which only reads metapackage format 6) |
-| `CHECKM2DB` | `CheckM2_database/uniref100.KO.1.dmnd` (2021; **older than the v3 DB recommended for CheckM2 1.1.0**) |
-| `GUNC_DB` | `gunc/1.0.1/gunc_db_2.0.4.dmnd` (proGenomes 2.1) |
-| `EGGNOG_DATA_DIR` | `eggnog-mapper/2.1.12` (eggNOG 5.0.2, current for emapper 2.1.x) |
+### Reference: how the dataset is built
 
-## Scripts
+Everything runs in the pixi environment (`pixi install --all`; eggNOG-mapper is
+in its own `eggnog` environment because of a diamond version conflict with
+GUNC). Databases are set in `pixi.toml` (`[activation.env]`) and point to
+`/work/microbiome/db`.
 
 | file | what |
 |---|---|
-| `jugfile.py` | the task graph (below) and the dataset parameters (`SUBSET`) |
-| `jug_hpc.toml` | resources of each task (one jug_hpc class per full-data step); `tests/jug_hpc.toml` for test mode |
-| `scripts/hpc/qsub` | `qsub` for jug_hpc inside the mqyolo sandbox (which has only `mqsub`): translates the `#PBS` header into `mqsub` options |
-| `scripts/hpc/worker_setup.sh` | run by every worker: activates the pixi environment |
-| `scripts/pipeline.sh` | the workshop pipeline, step by step (`qc_sr qc_lr profile_sr profile_lr assemble polish_aln_r1 polish_aln_r2 polish map bin checkm2 gunc appraise genes eggnog`); `--only STEP` runs one step; writes `timings.tsv`; can fake slow steps (below) |
-| `scripts/select_bins.py` | summarises bins (CheckM2, GUNC, depth, SingleM taxonomy) and proposes a selection |
-| `scripts/make_subset.sh` + `select_reads.py` | extract the workshop reads |
-| `scripts/validate.py` | compares the workshop run with the full run (GOALS step 5) |
-| `tests/smoke_test.sh` | simulates a 3-genome community from GTDB genomes (and runs `pipeline.sh` on it) |
+| `jugfile.py` | the [Jug](https://jug.readthedocs.io) task graph: full-data run → `select_bins` → `make_subset` → `workshop_run` → `validate`; dataset parameters in `SUBSET` |
+| `jug_hpc.toml` | resources per task for [jug_hpc](https://github.com/luispedro/jug_hpc); `tests/jug_hpc.toml` for test mode |
+| `scripts/pipeline.sh` | the workshop pipeline (`step_*` functions = the workshop commands); `--only STEP`, `--fake STEP --precomputed RUN`; writes `timings.tsv` |
+| `scripts/select_bins.py`, `make_subset.sh`, `select_reads.py`, `validate.py` | bin selection, read extraction, validation |
+| `selection_manual.txt` | optional manual bin selection (changes the subset tag) |
+| `tests/smoke_test.sh` | simulated 3-genome community for an end-to-end test (`pixi run submit-test`) |
 
-`pipeline.sh` is both the full-data run and what participants run, so the
-workshop commands are the ones that were validated. The commands in each
-`step_*` function are what the handout should show.
+To rebuild (e.g., after changing `SUBSET` or a database): `pixi run submit`
+(keep it running); `pixi run jug invalidate --name TASK` after changing a
+script; on failure read `logs/jug/`, `pixi run jug cleanup --failed-only` and
+restart. The full-data results in `runs/full/` are reused.
 
-## Running it
 
-```bash
-pixi run submit                   # keep running (e.g., in tmux) until done
-pixi run jug status               # progress
-pixi run jug shell                # value(validation)['report'], ...
-```
+## Next: `metag-ws`, the workshop helper (GOALS: "Workshop support data & tools")
 
-`pixi run submit` runs `jug-hpc submit`, which polls Jug (every minute,
-backing off to 5 min while nothing changes) and submits a worker for each
-class with a ready task; each class (`jug_hpc.toml`) holds one task, so its
-worker runs that task and exits. jug_hpc's cluster settings (PBS, the `-P`
-project) are in `~/.config/jug_hpc/cluster.toml`. Jug keeps the results in
-`jugfile.jugdata/` (a `file_keepalive:` store, set in `jug_hpc.toml` and
-`.jugrc`), and jug_hpc keeps the jobs it submitted in `.jug_hpc/jobs.json`, so
-the submitter can be stopped and restarted at any time. Worker logs are in
-`logs/jug/<class>-<job>.log`, PBS's own in `logs/jug/scheduler/`. Before
-changing resources, check with `pixi run jug-hpc check` (which class runs
-which task) and `pixi run jug-hpc submit --dry-run` (the job scripts).
+A Python command-line tool, installed with pixi, that runs on the workshop
+machine. For each workshop step it can print the command (`show-cmd`), print
+the command with each argument explained (`explain-cmd`), or bring in the
+precomputed results (`results-for`).
 
-jug and jug_hpc are installed from git (`[pypi-dependencies]` in
-`pixi.toml`; jug_hpc needs features of jug that are not released yet);
-`pixi.lock` pins the commits.
+### Design
 
-Failures are not retried automatically: the submitter stops (exit status 1)
-when only failed tasks are left, or when 3 jobs of a class in a row fail.
-A worker killed at the walltime leaves its task's lock, which the
-`file_keepalive:` store turns into a failure after 30 min. Read the log, fix
-the cause, `pixi run jug cleanup --failed-only`, restart `pixi run submit`.
-Jug does not notice changes to the scripts: after changing one,
-`pixi run jug invalidate --name TASK` (this also invalidates everything
-downstream).
+1. **Steps** (as in GOALS; `pipeline.sh` step in the last column):
 
-Test mode runs the same graph on the simulated community (`tests/jugrun/`,
-jugdir `tests/jugfile.jugdata/`, logs in `tests/logs/`; `tests/` is a separate
-jug_hpc project, with one 16-CPU class for all tasks), as an end-to-end check
-before the multi-day full run:
+   | # | step | pipeline.sh |
+   |---|---|---|
+   | 1 | Get data | — |
+   | 2.1 / 2.2 | Read QC: short / long | `qc_sr` / `qc_lr` |
+   | 3.1 / 3.2 | SingleM: short / long | `profile_sr` / `profile_lr` |
+   | 4 | Assembly | `assemble` (without `bwa index`) |
+   | 5.1 / 5.2 | Polish: mapping / polypolish | `bwa index` + `polish_aln_r1` + `polish_aln_r2` / `polish` |
+   | 6 | Mapping | `map` |
+   | 7 | Binning | `bin` |
+   | 8 | CheckM2 | `checkm2` |
+   | 9 | GUNC | `gunc` |
+   | 10 | SingleM appraise | `appraise` |
+   | 11 | Gene prediction (pyrodigal) | `genes` |
+   | 12 | eggNOG-mapper | `eggnog` |
 
-```bash
-pixi run bash tests/smoke_test.sh   # once, to simulate tests/sim/ (or submit it with mqsub)
-pixi run submit-test
-pixi run status-test
-```
+   A step can be given as `5` (all its substeps) or `5.2`.
+2. **Invocation.** `metag-ws <subcommand> [STEP]`: with a step (`metag-ws
+   show-cmd 5.2`) there is no menu (for instructors, slides, scripting);
+   without one it shows the menu.
+3. **Menu.** A numbered list; the last step used (by any subcommand) is
+   highlighted and the **next** step is the default (Enter selects it). The
+   state is per user, in `$XDG_STATE_HOME/metag-ws/state.json` (default
+   `~/.local/state/metag-ws/`).
+4. **Folder layout.** Each participant works in their own directory
+   (`~/workshop`, override with `METAG_WS_DIR`), with one folder per step,
+   zero-padded so that `ls` lists them in order:
 
-## The task graph
+   ```
+   01_DATA  02_QC  03_SINGLEM  04_ASSEMBLY  05_POLISH  06_MAPPING
+   07_BINNING  08_CHECKM2  09_GUNC  10_APPRAISE  11_GENES  12_EGGNOG
+   ```
 
-```
-full_qc_sr ─┬────────────────────── full_profile_sr ─────────────────────────────┐
-full_qc_lr ─┼─ full_profile_lr ───────────────────────────────────────────── full_appraise ─┐
-            └─ full_assemble ─┬─ full_polish_aln(r1) ─┬─ full_polish ─ full_map ─ full_bin ─┬─ full_checkm2 ─┤
-              (full_qc_sr ──┘)└─ full_polish_aln(r2) ─┘   └─ full_map_lr ─┐                 └─ full_gunc ────┤
-                                                                          │                                  │
-                                           make_subset ◄──────────────────┴───────────── select_bins ◄───────┘
-                              │
-                         workshop_run ── validate
-```
+   Substeps share their step's folder (`02_QC` has the short- and long-read
+   QC). **Each step writes only into its own folder** and only reads from
+   earlier ones. This needs a few command changes compared with
+   `pipeline.sh`, where `bwa index` writes next to the assembly: step 5.1
+   uses `bwa index -p 05_POLISH/draft 04_ASSEMBLY/assembly_primary.fa`, and
+   step 6 `bwa index -p 06_MAPPING/polished 05_POLISH/polished.fa`.
+5. **`results-for N`** never touches the participant's own folders. For each
+   step up to and including N it creates `NN_<STEP>_precomputed`, a symlink
+   to the shared read-only copy (`$METAG_WS_PRECOMPUTED/NN_<STEP>`). That
+   takes no time and no disk, and it is safe because no step writes into
+   the folders it reads. It brings in all steps up to N, not only N:
+   assemblies, contig names and bins differ between runs, so mixing them
+   breaks things (e.g., a precomputed BAM with the participant's own
+   polished assembly). It then prints the note that the precomputed results
+   may not be exactly the same as the participant's own, and records N in
+   the state file (`precomputed_upto`).
+6. **Inputs after `results-for`.** `show-cmd` and `explain-cmd` print the
+   commands with the input folders filled in: inputs from a step ≤
+   `precomputed_upto` come from `NN_<STEP>_precomputed`, all others from the
+   participant's own folders. For example, after `results-for 4`, step 5
+   reads `02_QC_precomputed` and `04_ASSEMBLY_precomputed` and writes
+   `05_POLISH`; step 6 then reads the participant's own `05_POLISH` and
+   `02_QC_precomputed`. This keeps each chain consistent. A comment line
+   above the command says which inputs are precomputed. If a needed input
+   folder does not exist, they say which step to run first (or to use
+   `results-for`). Consequence: after `results-for`, commands copied from a
+   printed handout (which use the participants' own folders) no longer work
+   as they are; participants should use `show-cmd`.
+7. **Commands are what participants type**, not `pipeline.sh` internals: no
+   `bash -c`/`/usr/bin/time` wrappers, concrete file names
+   (`01_DATA/sample_R1.fq.gz`), the thread count from the machine
+   configuration, database paths as the environment variables set by pixi
+   (`$CHECKM2DB`, ...). Step 12 shows the command for a named MAG instead
+   of the `awk` one-liner: the best bin (completeness − 5 × contamination)
+   in the CheckM2 report that step 12 reads (own or precomputed), filled in
+   by `metag-ws` (and the same in `_run-all`, whose bins may be named
+   differently). `explain-cmd` explains how to choose it from that report.
+8. **"Get data" (step 1)**: for now, copy the reads from the shared data
+   directory into `01_DATA/` (`cp $METAG_WS_DATA/*.fq.gz 01_DATA/`).
+   The workshop dataset is 1.2 GB (`sample_R1.fq.gz` 91 MB,
+   `sample_R2.fq.gz` 94 MB, `sample_ont.fq.gz` 1.0 GB). **Placeholder:** make
+   it public (e.g., Zenodo, citing the original study) and download it from
+   there instead.
 
-| task | CPUs | RAM (GB) | walltime (h) |
-|---|---|---|---|
-| full_qc_sr / full_qc_lr | 16 | 32 | 24 / 48 |
-| full_profile_sr / full_profile_lr | 32 | 64 | 48 |
-| full_assemble | 64 | 500 | 48 |
-| full_polish_aln (×2: R1, R2) | 12 | 24 | 24 |
-| full_polish (polypolish) | 12 | 768 | 24 |
-| full_map | 40 | 48 | 48 |
-| full_bin | 12 | 128 | 48 |
-| full_checkm2 / full_gunc / full_appraise | 32 | 128 / 128 / 64 | 24 |
-| full_map_lr | 32 | 64 | 48 |
-| select_bins / validate | 1 / 4 | 8 / 16 | 1 |
-| make_subset | 16 | 64 | 24 |
-| workshop_run | 16 (`WORKSHOP_THREADS`: match the workshop machines) | 64 | 4 |
+### Implementation
 
-### 1. Full pipeline on the full data (`full_*` tasks)
+1. **Package** `metag-ws/` (own `pyproject.toml`, `[project.scripts]
+   metag-ws = "metag_ws.cli:main"`), installed into the default pixi
+   environment with `[pypi-dependencies] metag-ws = { path = "./metag-ws",
+   editable = true }`. Dependencies: Python stdlib (`argparse`, `tomllib`,
+   `json`, `shutil`) plus `rich` for the menu highlighting and
+   `explain-cmd` formatting. Plain numbered prompt (no full-screen TUI) so it
+   works in any SSH terminal and in Jupyter/VS Code terminals.
+2. **Step definitions** in one data file, `metag_ws/steps.toml`: for each
+   step its number, title, command(s), per-argument explanations
+   (`explain-cmd`), the outputs (paths relative to the working directory, as
+   in `outputs_of` in `pipeline.sh`), and what to look at in the outputs (a
+   line or two, shown after `show-cmd`/`explain-cmd`).
+3. **`show-cmd`**: prints the command(s) ready to copy: plain text, with
+   no box or prompt characters that would break copy-paste.
+4. **`explain-cmd`**: the command, then each argument with its explanation
+   (e.g., `--environment soil` → pretrained model, why not training;
+   `bwa mem -a` → all alignments, needed by polypolish; `-l 1000` →
+   minimum read length).
+5. **`results-for`**: creates the `_precomputed` symlinks, prints the note,
+   updates the state file. It does not ask for confirmation, since it
+   does not overwrite anything; if a `_precomputed` symlink already exists
+   it is left as it is.
+6. **Configuration**: shared data and precomputed directories, the working
+   directory and the thread count from environment variables, with defaults
+   for the AWS machine, set through `pixi.toml` (`[activation.env]` or a
+   separate feature for the AWS machine).
+7. **Hidden `metag-ws _run-all`** (not listed in `--help`), for testing and
+   for generating the precomputed results:
 
-Each task runs `pipeline.sh --only STEP` into `runs/full/` (no annotation;
-`full_polish` uses `--cleanup` to delete the large `bwa mem -a` SAM files).
-The draft is indexed by `full_assemble`, so the two `full_polish_aln` tasks
-(R1 and R2) run in parallel; `full_polish` (polypolish) then gets a job with
-few CPUs and much memory.
-`full_map_lr` maps the raw ONT reads to the polished assembly with minimap2
-(needed for step 3), in parallel with binning.
+   ```
+   metag-ws _run-all -o DIR [--data DIR] [-t THREADS] [--until STEP]
+   ```
 
-Risk: a single task taking longer than 48 h. The most likely is `full_assemble`
-(myloasm on ~70 GB of gzipped soil ONT reads). If it does, options are
-myloasm `--kmc` (faster k-mer counting, recommended by myloasm for soil, but
-needs `myloasm-kmc`, which is not on bioconda), or rerunning from myloasm's
-intermediate files. `full_profile_lr` could also be split into several Jug
-tasks with SingleM's `--read-chunk-size/--read-chunk-number`.
+   It runs the commands of all steps, in order, into `DIR`, using exactly
+   what `show-cmd` prints (same code path, with all inputs from `DIR`'s own
+   folders; it ignores and does not change the user's state file). `--data`
+   points step 1 at other reads (e.g., the simulated `tests/sim/`). Like
+   `pipeline.sh`, it records finished steps (`DIR/.done/`) so a killed run
+   can be resumed, writes `DIR/timings.tsv` (seconds and peak RAM per
+   step), and stops at the first failing command. Run it as a queue job
+   (`mqsub -t 16 -m 64 -- metag-ws _run-all ...`).
+8. **Precomputed bundle**, in the new folder layout:
+   `metag-ws _run-all -o precomputed --data subsets/9ca3c728/workshop_data`,
+   then `scripts/make_precomputed.sh` removes what participants do not
+   need: `.done/`, myloasm's intermediates (`binary_temp/`, `0-`–`3-*/`,
+   ~1 GB; keep `assembly_primary.fa`, the graphs and the log) and
+   polypolish's `filtered_*.sam` (1.2 GB). Keep `aln_R{1,2}.sam` (1.2 GB),
+   needed to run 5.2 after `results-for 5.1`. This run also checks that the
+   commands participants see work, and gives new timings (TIMING.md), since
+   the commands now differ a little from `pipeline.sh` (which keeps its
+   layout: the full-data run and the dataset scripts depend on it).
+9. **Docs**: participant-facing usage (`metag-ws --help` and a short handout
+   section); instructor notes on the AWS machine.
+10. **Tests: later.** To cover: the commands in `steps.toml` match the
+    validated ones in `pipeline.sh`; `_run-all` on the simulated data
+    (`tests/sim/`) finishes and produces every step's outputs;
+    `results-for` each step in a fresh directory, and `show-cmd` then picks
+    the right input folders; the state file (highlight, default = next
+    step).
 
-### 2. Select bins (`select_bins`)
+### The AWS machine
 
-Runs `scripts/select_bins.py` into `subsets/<tag>/selection/`. `<tag>` is a hash
-of `SUBSET` (in `jugfile.py`) and of the manual selection, so each attempt in
-step 6 gets its own directory and nothing upstream is rerun.
+One large machine shared by all participants, each with their own user
+account; data, software, databases and precomputed results in shared
+read-only paths (e.g., `/opt/metag-ws/{data,precomputed,db}`), each user's
+work in their home directory.
 
-* Candidates: CheckM2 completeness ≥ 90%, contamination ≤ 5% (MIMAG high
-  quality), GUNC pass. Thresholds are options (`--min-completeness`,
-  `--max-contamination`). If too few bins pass, relax to ≥ 70% / ≤ 10%.
-* Abundance: candidates are split into 5 strata of log short-read depth, one
-  bin per stratum, so the selection goes from the least to the most abundant
-  *good* bin.
-* Taxonomy: within a stratum, the bin from the least-represented phylum, then
-  class, wins (taxonomy = the most-covered lineage in the SingleM profile of
-  the bin).
-* Review `subsets/<tag>/selection/bins_summary.tsv`. To choose the bins by hand
-  (e.g. to include an interesting lineage), list them in
-  `selection_manual.txt` (repository root, committed): this changes the tag,
-  and the downstream tasks run again for the new selection. This is the one
-  manual decision.
+1. **Size**: the 24.8 min was measured with 16 threads / 64 GB for one run
+   (peak RAM per step ≤ 8.8 GB). With many participants running at once,
+   choose CPUs and the per-user thread count (`METAG_WS_THREADS`) together:
+   e.g., 30 participants × 8 threads ≈ 240 vCPUs if all run the same step at
+   the same time (they will not all do so, and `results-for` lets slow
+   participants skip ahead). Time a few simultaneous runs on the chosen
+   instance type and update TIMING.md.
+2. **Databases** on fast local disk (≈ 77 GB: eggNOG 51 GB, GUNC 13.5 GB,
+   SingleM 9.7 GB, CheckM2 3.1 GB; more with CheckM2 DB v3). On a shared
+   machine they stay in the page cache once the first user has read them, if
+   there is enough RAM: plan RAM for the databases (≈ 36 GB of DIAMOND/SingleM
+   files actually read) plus the users' jobs. Make the database paths in
+   `pixi.toml` configurable instead of the aqua paths, and add a setup script
+   that downloads them (`singlem data`, `checkm2 database --download`,
+   `gunc download_db`, `download_eggnog_data.py`); this is machine setup, not
+   part of the workshop.
+3. **Software**: one shared `pixi install --frozen --all` (the `eggnog`
+   environment too), and `metag-ws` and the tools on every user's `PATH`
+   (e.g., activation in `/etc/profile.d/`).
+4. **Users**: one account per participant (created from a list); home
+   directories need ≈ 5 GB each for a full own run (nothing extra for
+   `results-for`, which only creates symlinks).
+5. Build it once as an AMI (e.g., with a provisioning script in
+   `scripts/aws/`), so it can be relaunched for each workshop.
 
-### 3–4. Extract reads and add background (`make_subset`)
+### Open questions
 
-`scripts/make_subset.sh`, with `max_depth_sr`, `max_depth_lr`, `background`
-and `seed` from `SUBSET`, into `subsets/<tag>/workshop_data/`.
-
-* Short reads: from the full-run BAM (paired `bwa mem` to the whole polished
-  assembly), every pair with a primary alignment of either mate to a selected
-  contig. Mapping to the whole assembly, not just the selected bins, keeps reads
-  from related organisms from being pulled in.
-* Long reads: raw ONT reads mapped with `minimap2 -x map-ont` to the whole
-  polished assembly (`full_map_lr`), keeping reads whose primary alignment
-  is to a selected contig.
-* Downsampling: bins above `--max-depth-*` are downsampled to that depth. The
-  fractions are written to `selection/reads_{sr,lr}.tsv` and copied to
-  `workshop_data/` so the distortion of relative abundances is recorded.
-* Background: a fraction `--background` of all *other raw* reads (unmapped,
-  mapped to other bins, or failing QC), so participants see unbinned contigs,
-  taxa without bins in SingleM, and realistic QC reports.
-* Read selection is a deterministic hash of the read name, so reruns give the
-  same dataset; reads keep their original order in the FASTQ files.
-* Output: `workshop_data/sample_R1.fq.gz`, `sample_R2.fq.gz`,
-  `sample_ont.fq.gz`.
-
-### 5–6. Validate and time (`workshop_run`, `validate`)
-
-`workshop_run` runs the whole `pipeline.sh` on the toy data into
-`subsets/<tag>/run/`, from scratch, with `WORKSHOP_THREADS` threads in a job of
-that size, so `timings.tsv` reflects the workshop machines. `validate` runs
-`validate.py`, which writes `validation.md` and checks:
-
-1. each selected bin is recovered (skani ANI ≥ 99%, aligned fraction ≥ 50%),
-   completeness within 5 points, contamination at most 2 points higher, GUNC
-   pass, and the same SingleM taxonomy as in the full run;
-2. the genus of each selected bin is in the short- and long-read SingleM
-   profiles;
-3. all expected output files exist and are not empty;
-4. the total time in `timings.tsv`: target ≤ 15 min, hard limit 30 min
-   (above 30 the workshop becomes difficult; validation fails only then).
-
-A FAIL is a result (`value(validation)['passed']`), not a task error. Adjust
-`SUBSET` in `jugfile.py` and run `pixi run submit` again until it passes:
-
-| problem | change |
-|---|---|
-| too slow, everything scales with read count | lower `max_depth_sr/_lr` (but keep ≥ ~20× LR for myloasm and ≥ ~15× SR for polishing) |
-| too slow in eggNOG-mapper / GUNC / CheckM2 | fewer bins (`n_bins`), or `--sensmode fast` for emapper |
-
-eggNOG-mapper annotates a single MAG (the best by CheckM2, written to
-`annotation/eggnog/mag.txt`), not all bins: on all 40 bins of the first
-subset (`6549321d`: background 0.01, LR cap 40×) it took 15 of the 45 min.
-The workshop explains that this is for time reasons. That run also led to
-lowering `background` to 0.002 and `max_depth_lr` to 25.
-| a selected bin falls apart | raise its depth cap, or swap it for another bin from the same stratum |
-| too clean (no unbinned contigs, no extra taxa) | raise `background` |
-| background produces bins that hurt runtime | lower `background` |
-| one substep is still too slow after all of the above | fake it (below) |
-
-### Fallback: faking a slow step
-
-We'd rather avoid it, but a step that is too slow can be faked: participants
-see the commands and get pre-computed results.
-
-```bash
-pixi run bash scripts/pipeline.sh ... --precomputed subsets/<tag>/run --fake eggnog,gunc
-```
-
-prints the commands of the faked steps and copies their outputs from a
-previous run on the workshop data; `timings.tsv` marks them `precomputed`
-(and validation then times only the steps that really ran). This only works
-if the earlier steps reproduce that run, especially the bins and their names
-(`SemiBin_N`). Check that by running the workshop pipeline twice and comparing
-`binning/output_bins`. Faking the last steps (`eggnog`, then `gunc`) is the
-safest option.
-
-## Open points
-
-* **Data access**: `full_data/` now holds the reads directly. The short reads
-  are readable; the ONT file (70.5 GB) and two DB files (GUNC
-  `gunc_db_2.0.4.dmnd`, eggNOG `eggnog_proteins.dmnd`) are on the slower storage
-  tier, and first reads block for a long time (tens of minutes so far).
-* **CheckM2 database**: the shared DB is the 2021 version. CheckM2 1.1.0
-  recommends DB v3 (doi:10.5281/zenodo.14897628).
-* **Workshop machine size**: the 15-minute target depends on the participants'
-  CPUs/RAM. `jugfile.py` assumes 16 CPUs (`WORKSHOP_THREADS`) / 64 GB.
-* **Database speed**: because of the tiered storage, the first read of a
-  database can stall for a long time. For the workshop, the databases should be
-  on local or fast disk; their loading is part of the measured time for
-  GUNC/CheckM2/eggNOG-mapper.
-* SemiBin2 is run with `--sequencing-type long_read` because the contigs come
-  from a long-read assembly (SemiBin2 then uses its long-read clustering);
-  coverage comes from the short reads only, as in GOALS.md.
+* Number of participants (sets the instance size and the threads per user).
+* Is `explain-cmd` also the place for interpreting the results (what to look
+  for in the QC report, CheckM2 thresholds), or only the arguments?
