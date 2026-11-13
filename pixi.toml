@@ -14,12 +14,16 @@ GUNC_DB = "/work/microbiome/db/gunc/1.0.1/gunc_db_2.0.4.dmnd"
 EGGNOG_DATA_DIR = "/work/microbiome/db/eggnog-mapper/2.1.12"
 
 [tasks]
-# jug_hpc (jug_hpc.toml) submits the jugfile's tasks to the queue. Inside the
-# mqyolo sandbox there is no qsub: scripts/hpc/qsub submits through mqsub.
-submit = { cmd = "jug-hpc submit", env = { PATH = "$PIXI_PROJECT_ROOT/scripts/hpc:$PATH", MQSUB_CWD = "$PIXI_PROJECT_ROOT" } }
-# end-to-end test on the simulated data (tests/jug_hpc.toml)
-submit-test = { cmd = "jug-hpc -C tests submit", env = { WS_TEST = "1", PATH = "$PIXI_PROJECT_ROOT/scripts/hpc:$PATH", MQSUB_CWD = "$PIXI_PROJECT_ROOT" } }
-status-test = { cmd = "jug status --jugdir file_keepalive:tests/jugfile.jugdata jugfile.py", env = { WS_TEST = "1" } }
+# Building the workshop dataset (data-prep/): jug_hpc (data-prep/jug_hpc.toml)
+# submits the jugfile's tasks to the queue. Inside the mqyolo sandbox there is
+# no qsub: data-prep/scripts/hpc/qsub submits through mqsub.
+submit = { cmd = "jug-hpc submit", cwd = "data-prep", env = { PATH = "$PIXI_PROJECT_ROOT/data-prep/scripts/hpc:$PATH", MQSUB_CWD = "$PIXI_PROJECT_ROOT" } }
+# end-to-end test on the simulated data (data-prep/tests/jug_hpc.toml)
+submit-test = { cmd = "jug-hpc -C tests submit", cwd = "data-prep", env = { WS_TEST = "1", PATH = "$PIXI_PROJECT_ROOT/data-prep/scripts/hpc:$PATH", MQSUB_CWD = "$PIXI_PROJECT_ROOT" } }
+status = { cmd = "jug status jugfile.py", cwd = "data-prep" }
+status-test = { cmd = "jug status --jugdir file_keepalive:tests/jugfile.jugdata jugfile.py", cwd = "data-prep", env = { WS_TEST = "1" } }
+# the commands in the workshop notes match metag-ws (materials/check_commands.py)
+check-commands = "python materials/check_commands.py"
 
 [dependencies]
 fastp = ">=1.4.0,<2"
@@ -53,5 +57,30 @@ metag-ws = { path = "./metag-ws", editable = true }
 [feature.eggnog.dependencies]
 eggnog-mapper = ">=2.1.15,<3"
 
+# Building the workshop materials (materials/): pandoc turns the one markdown
+# source into the slides and the handouts. Not needed on the workshop machine.
+#   pixi run -e docs materials          # deck + both handouts (PDF and HTML)
+#   pixi run -e docs check-materials    # no instructor notes in the handout
+# Tectonic fetches LaTeX packages on first use, and the first deck build
+# fetches reveal.js, so the first build needs network.
+[feature.docs.dependencies]
+pandoc = "3.11.*"
+tectonic = "0.17.*"
+font-ttf-dejavu = "*"
+font-ttf-dejavu-sans-mono = "*"
+# pdftotext, for check-materials
+poppler = "*"
+make = "*"
+# ```dot diagrams (materials/common/filters/diagram.lua) and media/*.py plots
+graphviz = ">=14.1.2,<15"
+matplotlib-base = ">=3.11.2,<4"
+python = ">=3.13"
+
+[feature.docs.tasks]
+materials = "make -C materials"
+check-materials = "make -C materials check"
+clean-materials = "make -C materials clean"
+
 [environments]
 eggnog = { features = ["eggnog"], no-default-feature = true }
+docs = { features = ["docs"], no-default-feature = true }

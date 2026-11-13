@@ -67,7 +67,7 @@ to polish the result.
 
 ### Source data
 
-One urban soil sample (`full_data/`):
+One urban soil sample (`data-prep/full_data/`):
 
 - Illumina paired-end reads: `1_350.fq1.gz`, `1_350.fq2.gz`
 - ONT reads: `fq1_ont.fastq.gz`

@@ -19,7 +19,7 @@
 # `outputs`: files (relative to the step's folder; globs allowed) that a
 # finished step leaves behind; used to check that inputs exist.
 #
-# The commands follow scripts/pipeline.sh (validated on the workshop dataset),
+# The commands follow data-prep/scripts/pipeline.sh (validated on the workshop dataset),
 # except for the folder layout: each step writes only into its own folder.
 
 [[step]]

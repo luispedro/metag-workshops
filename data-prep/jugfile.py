@@ -8,7 +8,7 @@ a queue job (sized as in jug_hpc.toml) for each task as soon as it is ready:
 
     pixi run submit             # e.g. in tmux; stops when everything is done
 
-Check progress with `pixi run jug status`; results with `pixi run jug shell`.
+Check progress with `pixi run status`; results with `pixi run jug shell`.
 
 Tuning the dataset (GOALS.md, step 6): edit SUBSET below. Every parameter
 combination gets its own directory, subsets/<tag>/, so earlier attempts are

@@ -6,7 +6,7 @@
 if [ -n "${PIXI_CACHE_DIR:-}" ] && [ ! -w "$PIXI_CACHE_DIR" ] && [ -w "/mnt/weka$PIXI_CACHE_DIR" ]; then
     export PIXI_CACHE_DIR="/mnt/weka$PIXI_CACHE_DIR"
 fi
-_ws_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+_ws_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 # pixi re-creates the .pixi/envs symlink (detached environments) on every
 # activation, so workers starting together race on it: one at a time. As an
 # assignment, a failing shell-hook stops the worker (set -e), unlike

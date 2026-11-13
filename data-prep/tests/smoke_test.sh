@@ -4,7 +4,7 @@
 # first idea of runtimes; it is NOT a substitute for validating real data.
 #
 # Run in the queue with
-#   mqsub --no-email -t 16 -m 64 --hours 4 -- pixi run --frozen bash tests/smoke_test.sh
+#   cd data-prep && mqsub --no-email -t 16 -m 64 --hours 4 -- pixi run --frozen bash tests/smoke_test.sh
 set -euo pipefail
 cd "$(dirname "$0")"
 D=/work/microbiome/db/gtdb/gtdb_release232/genomic_files_reps/gtdb_genomes_reps_r232/database

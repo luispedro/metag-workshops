@@ -23,7 +23,7 @@
 # Only safe if the earlier steps reproduce the precomputed run (same bins).
 set -euo pipefail
 
-REPO=$(cd "$(dirname "$0")/.." && pwd)
+REPO=$(cd "$(dirname "$0")/../.." && pwd)   # the repository root (pixi.toml)
 STEPS=(qc_sr qc_lr profile_sr profile_lr assemble polish_aln_r1 polish_aln_r2
        polish map bin checkm2 gunc appraise genes eggnog)
 THREADS=8

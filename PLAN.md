@@ -7,11 +7,11 @@ This turns [GOALS.md](GOALS.md) into concrete steps.
 **The workshop dataset is built and validated** (GOALS Part 2): subset
 `9ca3c728` (5 selected bins, background 0.002, depth caps 60× SR / 25× LR,
 eggNOG-mapper on the best MAG only), validation PASS, workshop run 24.8 min
-on 16 threads. Details and per-step times are in [TIMING.md](TIMING.md).
+on 16 threads. Details and per-step times are in [data-prep/TIMING.md](data-prep/TIMING.md).
 
-* data: `subsets/9ca3c728/workshop_data/` (`sample_R1.fq.gz`,
+* data: `data-prep/subsets/9ca3c728/workshop_data/` (`sample_R1.fq.gz`,
   `sample_R2.fq.gz`, `sample_ont.fq.gz`, 1.2 GB)
-* reference run (the future precomputed results): `subsets/9ca3c728/run/`
+* reference run (the future precomputed results): `data-prep/subsets/9ca3c728/run/`
 
 Still open from the dataset work:
 
@@ -25,24 +25,18 @@ Still open from the dataset work:
 
 ### Reference: how the dataset is built
 
-Everything runs in the pixi environment (`pixi install --all`; eggNOG-mapper is
-in its own `eggnog` environment because of a diamond version conflict with
-GUNC). Databases are set in `pixi.toml` (`[activation.env]`) and point to
-`/work/microbiome/db`.
-
-| file | what |
-|---|---|
-| `jugfile.py` | the [Jug](https://jug.readthedocs.io) task graph: full-data run → `select_bins` → `make_subset` → `workshop_run` → `validate`; dataset parameters in `SUBSET` |
-| `jug_hpc.toml` | resources per task for [jug_hpc](https://github.com/luispedro/jug_hpc); `tests/jug_hpc.toml` for test mode |
-| `scripts/pipeline.sh` | the workshop pipeline (`step_*` functions = the workshop commands); `--only STEP`, `--fake STEP --precomputed RUN`; writes `timings.tsv` |
-| `scripts/select_bins.py`, `make_subset.sh`, `select_reads.py`, `validate.py` | bin selection, read extraction, validation |
-| `selection_manual.txt` | optional manual bin selection (changes the subset tag) |
-| `tests/smoke_test.sh` | simulated 3-genome community for an end-to-end test (`pixi run submit-test`) |
+Everything for building the dataset is in [`data-prep/`](data-prep/) (see
+its README): the Jug task graph, the scripts, the tests and, not in git, the
+runs. It uses the pixi environment of the repository root (`pixi install
+--all`; eggNOG-mapper is in its own `eggnog` environment because of a diamond
+version conflict with GUNC). Databases are set in `pixi.toml`
+(`[activation.env]`) and point to `/work/microbiome/db`.
 
 To rebuild (e.g., after changing `SUBSET` or a database): `pixi run submit`
-(keep it running); `pixi run jug invalidate --name TASK` after changing a
-script; on failure read `logs/jug/`, `pixi run jug cleanup --failed-only` and
-restart. The full-data results in `runs/full/` are reused.
+(keep it running); in `data-prep/`, `pixi run jug invalidate --name TASK`
+after changing a script; on failure read `data-prep/logs/jug/`, `pixi run jug
+cleanup --failed-only` and restart. The full-data results in
+`data-prep/runs/full/` are reused.
 
 
 ## Next: `metag-ws`, the workshop helper (GOALS: "Workshop support data & tools")
@@ -56,13 +50,14 @@ precomputed results (`results-for`).
 commands, explanations, what to look at; `metag_ws/cli.py`), installed in the
 default pixi environment. Checked by hand: `results-for` and the choice of
 input folders, the menu and state, step 12's MAG. End-to-end test
-(`tests/run_all_sim.sh`, `_run-all` on `tests/sim/`, 16 threads): all 12
+(`data-prep/tests/run_all_sim.sh`, `_run-all` on `data-prep/tests/sim/`, 16 threads): all 12
 steps PASS, 21.0 min (GUNC 349 s, eggNOG-mapper 345 s). Precomputed run on
-the workshop dataset: `scripts/run_precomputed.sh` → `precomputed/`
+the workshop dataset: `data-prep/scripts/run_precomputed.sh` → `data-prep/precomputed/`
 (job 28124971): all steps PASS, 26.7 min (vs 24.8 min with `pipeline.sh`),
 31 bins, step 12 on SemiBin_2 (as in the reference run), 6.0 GB before
-cleanup. Not done yet: `make_precomputed.sh` (Implementation 8),
-docs (9), tests (10).
+cleanup. Docs (9) started: the workshop notes in `materials/` have the
+commands of every step and how to use `metag-ws`. Not done yet:
+`make_precomputed.sh` (Implementation 8), the rest of the docs (9), tests (10).
 
 ### Design
 
@@ -189,26 +184,28 @@ docs (9), tests (10).
    It runs the commands of all steps, in order, into `DIR`, using exactly
    what `show-cmd` prints (same code path, with all inputs from `DIR`'s own
    folders; it ignores and does not change the user's state file). `--data`
-   points step 1 at other reads (e.g., the simulated `tests/sim/`). Like
+   points step 1 at other reads (e.g., the simulated `data-prep/tests/sim/`). Like
    `pipeline.sh`, it records finished steps (`DIR/.done/`) so a killed run
    can be resumed, writes `DIR/timings.tsv` (seconds and peak RAM per
    step), and stops at the first failing command. Run it as a queue job
    (`mqsub -t 16 -m 64 -- metag-ws _run-all ...`).
 8. **Precomputed bundle**, in the new folder layout:
    `metag-ws _run-all -o precomputed --data subsets/9ca3c728/workshop_data`,
-   then `scripts/make_precomputed.sh` removes what participants do not
+   then `data-prep/scripts/make_precomputed.sh` removes what participants do not
    need: `.done/`, myloasm's intermediates (`binary_temp/`, `0-`–`3-*/`,
    ~1 GB; keep `assembly_primary.fa`, the graphs and the log) and
    polypolish's `filtered_*.sam` (1.2 GB). Keep `aln_R{1,2}.sam` (1.2 GB),
    needed to run 5.2 after `results-for 5.1`. This run also checks that the
-   commands participants see work, and gives new timings (TIMING.md), since
+   commands participants see work, and gives new timings (data-prep/TIMING.md), since
    the commands now differ a little from `pipeline.sh` (which keeps its
    layout: the full-data run and the dataset scripts depend on it).
-9. **Docs**: participant-facing usage (`metag-ws --help` and a short handout
-   section); instructor notes on the AWS machine.
+9. **Docs**: participant-facing usage (`metag-ws --help` and the workshop
+   notes, `materials/metagenomics-workshop.md`, which build the slides and
+   the handouts; `pixi run check-commands` checks that their commands are
+   those of `steps.toml`); instructor notes on the AWS machine.
 10. **Tests: later.** To cover: the commands in `steps.toml` match the
     validated ones in `pipeline.sh`; `_run-all` on the simulated data
-    (`tests/sim/`) finishes and produces every step's outputs;
+    (`data-prep/tests/sim/`) finishes and produces every step's outputs;
     `results-for` each step in a fresh directory, and `show-cmd` then picks
     the right input folders; the state file (highlight, default = next
     step).
@@ -226,7 +223,7 @@ work in their home directory.
    e.g., 30 participants × 8 threads ≈ 240 vCPUs if all run the same step at
    the same time (they will not all do so, and `results-for` lets slow
    participants skip ahead). Time a few simultaneous runs on the chosen
-   instance type and update TIMING.md.
+   instance type and update data-prep/TIMING.md.
 2. **Databases** on fast local disk (≈ 77 GB: eggNOG 51 GB, GUNC 13.5 GB,
    SingleM 9.7 GB, CheckM2 3.1 GB; more with CheckM2 DB v3). On a shared
    machine they stay in the page cache once the first user has read them, if
@@ -243,7 +240,7 @@ work in their home directory.
    directories need ≈ 5 GB each for a full own run (nothing extra for
    `results-for`, which only creates symlinks).
 5. Build it once as an AMI (e.g., with a provisioning script in
-   `scripts/aws/`), so it can be relaunched for each workshop.
+   `data-prep/scripts/aws/`), so it can be relaunched for each workshop.
 
 ### Open questions
 

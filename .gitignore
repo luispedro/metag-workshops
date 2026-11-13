@@ -2,23 +2,30 @@
 .pixi/*
 !.pixi/config.toml
 
-# pipeline outputs
-runs/
-logs/
-selection/work/
+# workshop materials (pandoc output)
+materials/build/
+
+# the template the materials' build machinery was copied from (its own repo)
+vibe-workshops/
+
+# data preparation: pipeline outputs and run state
+data-prep/full_data/
+data-prep/runs/
+data-prep/subsets/
+data-prep/precomputed/
+data-prep/logs/
+data-prep/selection/work/
+data-prep/jugfile.jugdata/
+data-prep/tests/sim/
+data-prep/tests/run/
+data-prep/tests/ws_run/
+data-prep/tests/jugrun/
+data-prep/tests/jugfile.jugdata/
+data-prep/tests/logs/
+data-prep/tests/smoke.log
 workshop_data/
-tests/sim/
-tests/run/
-tests/ws_run/
-tests/smoke.log
 __pycache__/
-jugfile.jugdata/
-subsets/
-tests/jugrun/
-tests/jugfile.jugdata/
-tests/logs/
 
 # PBS job stdout/stderr
 *.o[0-9]*
 *.e[0-9]*
-precomputed/
