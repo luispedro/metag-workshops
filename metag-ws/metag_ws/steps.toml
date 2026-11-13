@@ -1,0 +1,496 @@
+# The workshop steps: what `metag-ws show-cmd`, `explain-cmd` and `results-for`
+# know about each step (PLAN.md, "metag-ws").
+#
+# A [[step]] with an integer id ("5") is a workshop step with its own folder;
+# one with a dotted id ("5.1") is a substep and shares its step's folder. Only
+# steps without substeps and substeps have commands ([[step.cmd]]).
+#
+# Placeholders in `run`, `look_at` and `explain`:
+#   {2.1}            folder with the outputs of step 2.1: 02_QC, or
+#                    02_QC_precomputed after `metag-ws results-for 2` (or
+#                    later). In a step's own commands, its own id is always its
+#                    own folder.
+#   {threads}        threads per participant (METAG_WS_THREADS)
+#   {threads_fastp}  the same, at most 16 (fastp uses at most 16)
+#   {data}           shared directory with the workshop reads (METAG_WS_DATA)
+#   {mag}            the bin annotated in step 12 (best in the CheckM2 report)
+# Shell variables are written as $NAME, not ${NAME}.
+#
+# `outputs`: files (relative to the step's folder; globs allowed) that a
+# finished step leaves behind; used to check that inputs exist.
+#
+# The commands follow scripts/pipeline.sh (validated on the workshop dataset),
+# except for the folder layout: each step writes only into its own folder.
+
+[[step]]
+id = "1"
+folder = "01_DATA"
+title = "Get data"
+outputs = ["sample_R1.fq.gz", "sample_R2.fq.gz", "sample_ont.fq.gz"]
+look_at = """
+Short reads (Illumina, paired-end): sample_R1.fq.gz and sample_R2.fq.gz.
+Long reads (Oxford Nanopore): sample_ont.fq.gz.
+Peek at the reads: zcat {1}/sample_R1.fq.gz | head -8
+Count them: seqkit stats {1}/*.fq.gz"""
+
+[[step.cmd]]
+run = """
+mkdir -p {1}
+cp {data}/sample_*.fq.gz {1}/"""
+explain = [
+    ["{data}", "shared, read-only directory with the workshop dataset: reads from one urban soil sample (Duan et al., 2026), reduced to a few genomes plus some background so that everything runs in minutes"],
+    ["{1}/", "your copy goes into the folder of step 1; every step has its own numbered folder"],
+]
+
+
+[[step]]
+id = "2"
+folder = "02_QC"
+title = "Read quality control"
+
+[[step]]
+id = "2.1"
+title = "Short reads (fastp)"
+outputs = ["sr_R1.fq.gz", "sr_R2.fq.gz", "fastp.html", "fastp.json"]
+look_at = """
+Open {2.1}/fastp.html in a browser: how many reads and bases passed the
+filters? Look at the quality per position (before and after filtering), the
+adapter content, the duplication rate and the insert size estimate."""
+
+[[step.cmd]]
+run = """
+mkdir -p {2.1}
+fastp \\
+    -i {1}/sample_R1.fq.gz -I {1}/sample_R2.fq.gz \\
+    -o {2.1}/sr_R1.fq.gz -O {2.1}/sr_R2.fq.gz \\
+    -h {2.1}/fastp.html -j {2.1}/fastp.json \\
+    -w {threads_fastp}"""
+explain = [
+    ["fastp", "trims adapters and low-quality ends and removes reads that are too short, low quality or with too many Ns; it also produces a QC report. The defaults are reasonable for Illumina data, so there are no filtering options here"],
+    ["-i, -I", "input: read 1 and read 2 of each pair (paired-end reads)"],
+    ["-o, -O", "output: the filtered reads, still paired (if one read of a pair is removed, so is its mate)"],
+    ["-h", "the QC report as HTML (open it in a browser)"],
+    ["-j", "the same report as JSON, for programs (e.g., MultiQC)"],
+    ["-w", "number of worker threads (fastp uses at most 16)"],
+]
+
+[[step]]
+id = "2.2"
+title = "Long reads (fastplong)"
+outputs = ["lr.fq.gz", "fastplong.html", "fastplong.json"]
+look_at = """
+Open {2.2}/fastplong.html: the read length distribution (and N50), the read
+quality, and how many reads and bases were removed. Compare the number of
+bases with the short reads."""
+
+[[step.cmd]]
+run = """
+mkdir -p {2.2}
+fastplong \\
+    -i {1}/sample_ont.fq.gz -o {2.2}/lr.fq.gz \\
+    -l 1000 \\
+    -h {2.2}/fastplong.html -j {2.2}/fastplong.json \\
+    -w {threads}"""
+explain = [
+    ["fastplong", "the long-read version of fastp: trims adapters and filters reads by quality and length"],
+    ["-i", "input: the Nanopore reads"],
+    ["-o", "output: the filtered reads"],
+    ["-l 1000", "remove reads shorter than 1,000 bp: they add little to a long-read assembly (and the short reads cover them anyway)"],
+    ["-h, -j", "QC report as HTML (for you) and JSON (for programs)"],
+    ["-w", "number of worker threads"],
+]
+
+
+[[step]]
+id = "3"
+folder = "03_SINGLEM"
+title = "Read-based taxonomic profiling (SingleM)"
+
+[[step]]
+id = "3.1"
+title = "Short reads"
+outputs = ["sr.otu.tsv", "sr.profile.tsv", "sr.profile.html"]
+look_at = """
+Open {3.1}/sr.profile.html (Krona: click to zoom in): which phyla and genera
+dominate? {3.1}/sr.profile.tsv has the same profile as a table (coverage per
+taxon). How much is classified only at a high level (e.g., phylum)?"""
+
+[[step.cmd]]
+run = """
+mkdir -p {3.1}
+singlem pipe \\
+    -1 {2.1}/sr_R1.fq.gz -2 {2.1}/sr_R2.fq.gz \\
+    --otu-table {3.1}/sr.otu.tsv \\
+    -p {3.1}/sr.profile.tsv \\
+    --taxonomic-profile-krona {3.1}/sr.profile.html \\
+    --threads {threads}"""
+explain = [
+    ["singlem pipe", "finds the reads that cover a set of single-copy marker genes (present once in nearly every bacterial and archaeal genome) and classifies them against GTDB. Because it does not depend on assembly, it also sees organisms that are too rare to assemble. The reference data (metapackage) is found through $SINGLEM_METAPACKAGE_PATH, set for you"],
+    ["-1, -2", "input: the quality-controlled paired reads from step 2.1"],
+    ["--otu-table", "for each marker gene, the distinct sequences found (\"OTUs\", a short window of the gene), how many reads have each, and its taxonomy. Used again in step 10"],
+    ["-p", "the taxonomic profile: estimated coverage of each taxon, combining all marker genes"],
+    ["--taxonomic-profile-krona", "the same profile as an interactive Krona chart (HTML)"],
+    ["--threads", "number of threads"],
+]
+
+[[step]]
+id = "3.2"
+title = "Long reads"
+outputs = ["lr.otu.tsv", "lr.profile.tsv", "lr.profile.html"]
+look_at = """
+Compare {3.2}/lr.profile.html with the short-read profile
+({3.1}/sr.profile.html): do the two technologies see the same taxa, in
+similar proportions? Which differences could come from the technology, and
+which from the amount of data?"""
+
+[[step.cmd]]
+run = """
+mkdir -p {3.2}
+singlem pipe \\
+    -1 {2.2}/lr.fq.gz \\
+    --otu-table {3.2}/lr.otu.tsv \\
+    -p {3.2}/lr.profile.tsv \\
+    --taxonomic-profile-krona {3.2}/lr.profile.html \\
+    --threads {threads}"""
+explain = [
+    ["singlem pipe", "the same profiling as for the short reads (step 3.1), now on the long reads"],
+    ["-1", "input: the quality-controlled long reads from step 2.2 (single-end, so there is no -2)"],
+    ["--otu-table", "marker gene sequences found, with counts and taxonomy (used again in step 10)"],
+    ["-p", "the taxonomic profile"],
+    ["--taxonomic-profile-krona", "the profile as an interactive Krona chart (HTML)"],
+    ["--threads", "number of threads"],
+]
+
+
+[[step]]
+id = "4"
+folder = "04_ASSEMBLY"
+title = "Long-read assembly (myloasm)"
+outputs = ["assembly_primary.fa"]
+look_at = """
+The contigs are in {4}/assembly_primary.fa. Get their number and lengths
+with: seqkit stats -a {4}/assembly_primary.fa
+The contig names say whether a contig is circular (a complete chromosome or
+plasmid?) and its depth: grep -c circular-yes {4}/assembly_primary.fa"""
+
+[[step.cmd]]
+run = """
+myloasm {2.2}/lr.fq.gz -o {4} -t {threads}"""
+explain = [
+    ["myloasm", "a metagenome assembler for noisy long reads (Nanopore R10 by default, the type of reads we have). It builds a string graph from the reads and resolves it into contigs, using differences in coverage to separate strains and repeats"],
+    ["{2.2}/lr.fq.gz", "input: the quality-controlled long reads. The short reads are not used for assembly, only for polishing (step 5)"],
+    ["-o", "output folder (created by myloasm). The contigs are in assembly_primary.fa, the assembly graph in final_contig_graph.gfa (it can be viewed with Bandage)"],
+    ["-t", "number of threads"],
+]
+
+
+[[step]]
+id = "5"
+folder = "05_POLISH"
+title = "Polishing with short reads"
+
+[[step]]
+id = "5.1"
+title = "Map short reads to the draft (bwa mem -a)"
+outputs = ["aln_R1.sam", "aln_R2.sam"]
+look_at = """
+SAM files are text: look at a few alignments with
+grep -v '^@' {5.1}/aln_R1.sam | head
+With -a, a read can have several alignments (flag 256 = secondary)."""
+
+[[step.cmd]]
+run = """
+mkdir -p {5.1}
+bwa index -p {5.1}/draft {4}/assembly_primary.fa"""
+explain = [
+    ["bwa index", "builds the index that bwa mem needs to align reads to the draft assembly (the myloasm contigs)"],
+    ["-p {5.1}/draft", "where to write the index (files {5.1}/draft.*), so that it goes into this step's folder and not next to the assembly"],
+]
+
+[[step.cmd]]
+run = """
+bwa mem -t {threads} -a {5.1}/draft {2.1}/sr_R1.fq.gz > {5.1}/aln_R1.sam
+bwa mem -t {threads} -a {5.1}/draft {2.1}/sr_R2.fq.gz > {5.1}/aln_R2.sam"""
+explain = [
+    ["bwa mem", "aligns the short reads to the draft assembly"],
+    ["-a", "report all alignments of a read, not only the best one. Polypolish needs them: a read from a repeat aligns equally well to every copy, and polypolish uses this to polish repeats correctly"],
+    ["R1 and R2 separately", "each read end is aligned on its own (single-end), as polypolish expects; it uses the pairs later, in its filter step"],
+    ["{5.1}/draft", "the index built above"],
+    ["> {5.1}/aln_R1.sam", "bwa writes the alignments (SAM format) to its output, which we save to a file"],
+    ["-t", "number of threads"],
+]
+
+[[step]]
+id = "5.2"
+title = "Polish (polypolish)"
+outputs = ["polished.fa"]
+look_at = """
+polypolish reports (on the screen) how many positions it changed. Few
+changes mean the long-read assembly was already accurate. The polished
+assembly is {5.2}/polished.fa: the same contigs, with corrected bases."""
+
+[[step.cmd]]
+run = """
+mkdir -p {5.2}
+polypolish filter \\
+    --in1 {5.1}/aln_R1.sam --in2 {5.1}/aln_R2.sam \\
+    --out1 {5.2}/filtered_R1.sam --out2 {5.2}/filtered_R2.sam"""
+explain = [
+    ["polypolish filter", "uses the read pairs to remove unlikely alignments: of the several alignments of a read, it keeps those where the mate is nearby, in the right orientation and at a distance that matches the insert size (estimated from the data)"],
+    ["--in1, --in2", "input: the all-alignments SAM files from step 5.1"],
+    ["--out1, --out2", "output: the filtered alignments"],
+]
+
+[[step.cmd]]
+run = """
+polypolish polish {4}/assembly_primary.fa \\
+    {5.2}/filtered_R1.sam {5.2}/filtered_R2.sam > {5.2}/polished.fa"""
+explain = [
+    ["polypolish polish", "at each position of the draft, looks at the bases of all the aligned short reads and changes it where they clearly agree on another base. Short reads are much more accurate than Nanopore reads, so this fixes remaining errors (mostly small insertions and deletions)"],
+    ["{4}/assembly_primary.fa", "the draft assembly to polish"],
+    ["filtered_R1.sam, filtered_R2.sam", "the filtered alignments"],
+    ["> {5.2}/polished.fa", "the polished assembly; the report goes to the screen"],
+]
+
+
+[[step]]
+id = "6"
+folder = "06_MAPPING"
+title = "Map reads to the polished assembly"
+outputs = ["sr.sorted.bam", "sr.sorted.bam.bai"]
+look_at = """
+What fraction of the reads maps to the assembly? samtools flagstat {6}/sr.sorted.bam
+Reads that do not map come from organisms (or parts of genomes) that were not
+assembled. Coverage per contig: samtools coverage {6}/sr.sorted.bam | head"""
+
+[[step.cmd]]
+run = """
+mkdir -p {6}
+bwa index -p {6}/polished {5.2}/polished.fa"""
+explain = [
+    ["bwa index", "index the polished assembly (a new index: the sequence changed)"],
+    ["-p {6}/polished", "write the index into this step's folder"],
+]
+
+[[step.cmd]]
+run = """
+bwa mem -t {threads} {6}/polished {2.1}/sr_R1.fq.gz {2.1}/sr_R2.fq.gz \\
+    | samtools sort -@ {threads} -o {6}/sr.sorted.bam"""
+explain = [
+    ["bwa mem", "aligns the short reads to the polished assembly, this time as pairs and keeping only the best alignment of each read. This gives the coverage of each contig, which the binner uses (contigs from the same genome have similar coverage)"],
+    ["{2.1}/sr_R1.fq.gz {2.1}/sr_R2.fq.gz", "both files: paired-end mapping"],
+    ["| samtools sort", "the pipe (|) passes the alignments directly to samtools, which sorts them by position and writes a compressed BAM file, without a large intermediate SAM file"],
+    ["-@", "threads for samtools"],
+    ["-o", "the sorted BAM file"],
+]
+
+[[step.cmd]]
+run = """
+samtools index {6}/sr.sorted.bam"""
+explain = [
+    ["samtools index", "index the sorted BAM (sr.sorted.bam.bai), so that programs can quickly get the reads of any region"],
+]
+
+
+[[step]]
+id = "7"
+folder = "07_BINNING"
+title = "Binning (SemiBin2)"
+outputs = ["output_bins/*.fa", "bins_info.tsv"]
+look_at = """
+Each bin (a draft genome, one FASTA file) is in {7}/output_bins/.
+How many bins are there, and how large are they? Look at {7}/bins_info.tsv
+(size, number of contigs, N50) or run: seqkit stats {7}/output_bins/*.fa"""
+
+[[step.cmd]]
+run = """
+SemiBin2 single_easy_bin \\
+    -i {5.2}/polished.fa \\
+    -b {6}/sr.sorted.bam \\
+    --environment soil \\
+    --sequencing-type long_read \\
+    --compression none \\
+    -o {7} \\
+    -t {threads}"""
+explain = [
+    ["SemiBin2 single_easy_bin", "groups contigs into bins (draft genomes) using their sequence composition (k-mers) and coverage, embedded with a neural network. \"single\": binning one sample; \"easy\": it runs all the steps (gene prediction, features, clustering) in one go"],
+    ["-i", "input: the polished contigs"],
+    ["-b", "the reads mapped to the contigs (step 6), for the coverage of each contig"],
+    ["--environment soil", "use the model pretrained on soil samples instead of training one on this sample: training is slower and, on a small dataset like ours, may be unstable"],
+    ["--sequencing-type long_read", "the contigs come from a long-read assembly (longer and fewer contigs), for which SemiBin2 uses a different clustering"],
+    ["--compression none", "write the bins as plain FASTA (.fa), not compressed (.fa.gz), which the next tools expect"],
+    ["-o", "output folder; the bins are in output_bins/"],
+    ["-t", "number of threads"],
+]
+
+
+[[step]]
+id = "8"
+folder = "08_CHECKM2"
+title = "Bin completeness and contamination (CheckM2)"
+outputs = ["quality_report.tsv"]
+look_at = """
+{8}/quality_report.tsv: completeness and contamination of each bin.
+Common thresholds (MIMAG): high quality >90% complete and <5% contaminated;
+medium quality >=50% and <10%. Which bins are high quality? Sort them with:
+sort -t$'\\t' -k2,2gr {8}/quality_report.tsv | cut -f1-3 | column -t"""
+
+[[step.cmd]]
+run = """
+checkm2 predict \\
+    -i {7}/output_bins -x fa \\
+    -o {8} \\
+    --database_path $CHECKM2DB \\
+    -t {threads} --force"""
+explain = [
+    ["checkm2 predict", "estimates how complete each bin is (what fraction of the genome was recovered) and how contaminated (how much comes from other genomes), with machine-learning models trained on the functions (genes) present in a genome"],
+    ["-i", "input: the folder with the bins"],
+    ["-x fa", "the file extension of the bins"],
+    ["-o", "output folder; the results are in quality_report.tsv"],
+    ["--database_path $CHECKM2DB", "the CheckM2 reference database (a DIAMOND database), already installed"],
+    ["-t", "number of threads"],
+    ["--force", "overwrite the output folder if it exists (e.g., when you run the command again)"],
+]
+
+
+[[step]]
+id = "9"
+folder = "09_GUNC"
+title = "Bin chimerism (GUNC)"
+outputs = ["GUNC.*.maxCSS_level.tsv"]
+look_at = """
+{9}/GUNC.progenomes_2.1.maxCSS_level.tsv: one line per bin. pass.GUNC says
+whether the bin passes; clade_separation_score (CSS) above 0.45 means genes
+from different lineages were mixed (a chimera). Do the bins that CheckM2 calls
+high quality pass GUNC?
+cut -f1,2,8,9,13 {9}/GUNC.progenomes_2.1.maxCSS_level.tsv | column -t"""
+
+[[step.cmd]]
+run = """
+mkdir -p {9}
+gunc run \\
+    -d {7}/output_bins -e .fa \\
+    -r $GUNC_DB \\
+    -o {9} --temp_dir {9} \\
+    -t {threads}"""
+explain = [
+    ["gunc run", "detects chimeric bins (that combine sequences from different organisms): it assigns each gene to a lineage and checks whether the genes of each contig, and of the whole bin, agree. CheckM2 can miss this kind of contamination, especially between distant organisms"],
+    ["-d", "input: the folder with the bins"],
+    ["-e .fa", "the file extension of the bins"],
+    ["-r $GUNC_DB", "the GUNC reference database (proGenomes 2.1), already installed"],
+    ["-o", "output folder"],
+    ["--temp_dir", "where to put temporary files (by default, the current folder)"],
+    ["-t", "number of threads"],
+]
+
+
+[[step]]
+id = "10"
+folder = "10_APPRAISE"
+title = "What did the bins capture? (SingleM appraise)"
+outputs = ["bins.otu.tsv", "appraise_sr.txt", "appraise_lr.txt"]
+look_at = """
+{10}/appraise_sr.txt: percent_binned is the fraction of the marker-gene
+coverage in the reads that is in the bins. {10}/appraise_sr.unaccounted.tsv
+lists what is in the reads but not in any bin: which taxa are missing, and
+why (abundance)? Compare with the long reads (appraise_lr.*)."""
+
+[[step.cmd]]
+run = """
+mkdir -p {10}
+singlem pipe \\
+    --genome-fasta-files {7}/output_bins/*.fa \\
+    --otu-table {10}/bins.otu.tsv \\
+    -p {10}/bins.profile.tsv \\
+    --threads {threads}"""
+explain = [
+    ["singlem pipe", "the same marker gene search as in step 3, now on the bins"],
+    ["--genome-fasta-files", "input: the bins (the shell expands *.fa into the list of all bin files)"],
+    ["--otu-table", "marker gene sequences found in each bin"],
+    ["-p", "taxonomic classification of the bins from their marker genes"],
+    ["--threads", "number of threads"],
+]
+
+[[step.cmd]]
+run = """
+singlem appraise \\
+    --metagenome-otu-tables {3.1}/sr.otu.tsv \\
+    --genome-otu-tables {10}/bins.otu.tsv \\
+    --output-unaccounted-for-otu-table {10}/appraise_sr.unaccounted.tsv \\
+    > {10}/appraise_sr.txt
+singlem appraise \\
+    --metagenome-otu-tables {3.2}/lr.otu.tsv \\
+    --genome-otu-tables {10}/bins.otu.tsv \\
+    --output-unaccounted-for-otu-table {10}/appraise_lr.unaccounted.tsv \\
+    > {10}/appraise_lr.txt"""
+explain = [
+    ["singlem appraise", "compares the marker gene sequences in the reads with those in the bins: how much of the community (as seen in the reads) did binning recover?"],
+    ["--metagenome-otu-tables", "what is in the reads (from step 3): once for the short reads, once for the long reads"],
+    ["--genome-otu-tables", "what is in the bins (from the command above)"],
+    ["--output-unaccounted-for-otu-table", "the marker gene sequences of the reads that match no bin: the organisms we did not bin"],
+    ["> appraise_sr.txt", "the summary (percentage binned) is written to the screen; we save it to a file"],
+]
+
+
+[[step]]
+id = "11"
+folder = "11_GENES"
+title = "Gene prediction (pyrodigal)"
+outputs = ["*.faa"]
+look_at = """
+For each bin: {11}/BIN.faa (proteins), BIN.fna (genes, DNA) and BIN.gff
+(coordinates). How many genes per bin? grep -c '>' {11}/*.faa
+Do larger bins have more genes? About how many genes per Mbp?"""
+
+[[step.cmd]]
+run = """
+mkdir -p {11}
+for fa in {7}/output_bins/*.fa; do
+    b=$(basename $fa .fa)
+    pyrodigal -i $fa -a {11}/$b.faa -d {11}/$b.fna -o {11}/$b.gff
+done"""
+explain = [
+    ["for fa in ...; do ... done", "a shell loop: runs the commands inside once for each bin, with $fa set to the bin's file"],
+    ["b=$(basename $fa .fa)", "the bin name, e.g. SemiBin_2 for .../SemiBin_2.fa, used to name the outputs"],
+    ["pyrodigal", "predicts protein-coding genes (a fast reimplementation of Prodigal). It runs in single-genome mode (the default): it learns the gene features (e.g., GC content, start codons) of each bin, which is why it is run per bin and not on the whole assembly"],
+    ["-i", "input: one bin"],
+    ["-a", "output: the protein sequences (.faa)"],
+    ["-d", "output: the gene sequences, DNA (.fna)"],
+    ["-o", "output: the gene coordinates (GFF)"],
+]
+
+
+[[step]]
+id = "12"
+folder = "12_EGGNOG"
+title = "Functional annotation (eggNOG-mapper)"
+outputs = ["*.emapper.annotations"]
+look_at = """
+{12}/{mag}.emapper.annotations: one line per protein with its best match,
+description, gene name (Preferred_name), COG category, KEGG orthologs and
+pathways, CAZy families, ... Look for a function, e.g.:
+grep -i nitrogenase {12}/{mag}.emapper.annotations | cut -f1,8,9
+How many proteins have an annotation? Which COG categories are most common?"""
+
+[[step.cmd]]
+run = """
+mkdir -p {12}
+pixi run -e eggnog emapper.py \\
+    -i {11}/{mag}.faa --itype proteins \\
+    -m diamond \\
+    --data_dir $EGGNOG_DATA_DIR \\
+    -o {mag} --output_dir {12} \\
+    --temp_dir {12} \\
+    --cpu {threads} --override"""
+explain = [
+    ["pixi run -e eggnog", "eggNOG-mapper is installed in its own pixi environment, eggnog: it needs an older version of DIAMOND than GUNC, and one environment cannot have both. `pixi run -e eggnog` runs a command in that environment (all the other tools are in the default one, which is already active). pixi finds the workshop project through $PIXI_PROJECT_MANIFEST, set when the environment is activated, so this works from any folder"],
+    ["emapper.py", "eggNOG-mapper: annotates proteins by finding their closest match among the eggNOG orthologous groups and transferring that group's functional annotation (names, GO terms, KEGG, CAZy, ...)"],
+    ["{mag}", "we annotate a single bin, {mag}: annotating all bins takes ~15 minutes. It is the best bin in the CheckM2 report ({8}/quality_report.tsv), by completeness - 5 x contamination. You can choose another one there: open the report, pick a bin with high completeness and low contamination, and use its name instead"],
+    ["-i ... --itype proteins", "input: the proteins of the bin (step 11)"],
+    ["-m diamond", "search with DIAMOND (fast protein alignment) against the eggNOG proteins"],
+    ["--data_dir $EGGNOG_DATA_DIR", "the eggNOG database, already installed"],
+    ["-o, --output_dir", "name prefix and folder of the output files"],
+    ["--temp_dir", "where to put temporary files (by default, the current folder)"],
+    ["--cpu", "number of threads"],
+    ["--override", "overwrite existing outputs (e.g., when you run the command again)"],
+]

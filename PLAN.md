@@ -52,6 +52,18 @@ machine. For each workshop step it can print the command (`show-cmd`), print
 the command with each argument explained (`explain-cmd`), or bring in the
 precomputed results (`results-for`).
 
+**Status (2026-11-13):** implemented in `metag-ws/` (`metag_ws/steps.toml`:
+commands, explanations, what to look at; `metag_ws/cli.py`), installed in the
+default pixi environment. Checked by hand: `results-for` and the choice of
+input folders, the menu and state, step 12's MAG. End-to-end test
+(`tests/run_all_sim.sh`, `_run-all` on `tests/sim/`, 16 threads): all 12
+steps PASS, 21.0 min (GUNC 349 s, eggNOG-mapper 345 s). Precomputed run on
+the workshop dataset: `scripts/run_precomputed.sh` → `precomputed/`
+(job 28124971): all steps PASS, 26.7 min (vs 24.8 min with `pipeline.sh`),
+31 bins, step 12 on SemiBin_2 (as in the reference run), 6.0 GB before
+cleanup. Not done yet: `make_precomputed.sh` (Implementation 8),
+docs (9), tests (10).
+
 ### Design
 
 1. **Steps** (as in GOALS; `pipeline.sh` step in the last column):
@@ -125,6 +137,13 @@ precomputed results (`results-for`).
    in the CheckM2 report that step 12 reads (own or precomputed), filled in
    by `metag-ws` (and the same in `_run-all`, whose bins may be named
    differently). `explain-cmd` explains how to choose it from that report.
+   eggNOG-mapper is in its own pixi environment, and step 12 shows this
+   instead of hiding it (a chance to show `pixi run -e`): `pixi run -e
+   eggnog emapper.py ...`, which works from `~/workshop` because pixi finds
+   the project through `$PIXI_PROJECT_MANIFEST` (set by the activation). On
+   the AWS machine, check that it works for participants with the shared,
+   read-only installation (otherwise add `--as-is`, which never installs).
+   Step 11 does not write `all_bins.faa` (nothing uses it; one loop line less).
 8. **"Get data" (step 1)**: for now, copy the reads from the shared data
    directory into `01_DATA/` (`cp $METAG_WS_DATA/*.fq.gz 01_DATA/`).
    The workshop dataset is 1.2 GB (`sample_R1.fq.gz` 91 MB,

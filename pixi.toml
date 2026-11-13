@@ -37,6 +37,7 @@ seqkit = ">=2.14.0,<3"
 myloasm = ">=0.7.0,<0.8"
 skani = ">=0.4.0,<0.5"
 pandas = ">=3.0.6,<4"
+rich = ">=15.0.0,<16"
 
 # jug from main (jug execute --exclude-name, JUG_MAX_SECONDS), used by jug_hpc,
 # which submits the jugfile's tasks to the queue (jug_hpc.toml). pixi.lock pins
@@ -44,6 +45,8 @@ pandas = ">=3.0.6,<4"
 [pypi-dependencies]
 jug = { git = "https://github.com/luispedro/jug", branch = "main" }
 jug_hpc = { git = "https://github.com/luispedro/jug_hpc", branch = "main" }
+# the workshop helper (PLAN.md)
+metag-ws = { path = "./metag-ws", editable = true }
 
 # eggnog-mapper 2.1.15 needs diamond <2.1 while gunc 1.1.1 needs diamond 2.1.24,
 # so it lives in its own environment: `pixi run -e eggnog emapper.py ...`

@@ -9,6 +9,7 @@ selection/work/
 workshop_data/
 tests/sim/
 tests/run/
+tests/ws_run/
 tests/smoke.log
 __pycache__/
 jugfile.jugdata/
@@ -20,3 +21,4 @@ tests/logs/
 # PBS job stdout/stderr
 *.o[0-9]*
 *.e[0-9]*
+precomputed/
