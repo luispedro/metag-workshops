@@ -1,9 +1,9 @@
 ---
 title: "Metagenomics with Long and Short Reads"
-subtitle: "From reads to annotated genomes"
+subtitle: "From reads to annotated draft genomes"
 author:
   - "[Luis Pedro Coelho](https://luispedro.org)"
-  - "Ben Woodcroft"
+  - "[Ben Woodcroft](https://www.qut.edu.au/about/our-people/academic-profiles/b.woodcroft)"
 date: "2026"
 ---
 
@@ -56,9 +56,11 @@ digraph pipeline {
 ```
 
 ::: handout
-The assembly is a **hybrid**: the long reads (Oxford Nanopore) are assembled,
-and the short reads (Illumina) are used to correct (polish) the assembly and
-to estimate the coverage of each contig for binning.
+The assembly is based on the long reads (Oxford Nanopore), and the short reads
+(Illumina) are used to correct (polish) the assembly and to estimate the
+coverage of each contig for binning.
+
+
 :::
 
 ## Learning goals
@@ -87,15 +89,17 @@ Nanopore (long reads):
 > doi:[10.64898/2026.03.20.713087](https://doi.org/10.64898/2026.03.20.713087)
 
 ::: handout
-The full sample is ~20 GB of short reads and ~70 GB of long reads: too much
-for a workshop. We use a reduced version (1.2 GB) that keeps the reads of a few
-genomes that assemble well, plus a small random fraction of the rest. The
-commands are exactly those you would run on the full data, but they finish in
-minutes instead of days.
+The full sample is ~20 GB of short reads and ~70 GB of long reads. Processing
+it takes 38.5 hours (using multiple threads) and >512 GB of RAM.
+
+We use a reduced version (1.2 GB) that keeps the reads of a few genomes that
+assemble well, plus a small random fraction of the rest. The commands are
+exactly those you would run on the full data, but they finish in minutes!
 
 The price is that the dataset no longer represents the original sample: the
 few selected genomes are much more abundant, relative to everything else, than
-they were in the soil.
+they were in the soil. **No conclusions about the soil microbiome can be drawn
+from this dataset!**
 :::
 
 # Working on the workshop machine
@@ -188,7 +192,7 @@ metag-ws results-for 4
 - From then on, `metag-ws show-cmd` uses them as inputs
 
 ::: handout
-Use it when a step fails, or takes too long, or if you arrive late: you can
+Use it when a step fails, or takes too long, or for any reason at all: you can
 then continue from the next step with everyone else.
 
 It always brings in all the steps up to the one you choose, not only that
@@ -440,6 +444,9 @@ polypolish polish 04_ASSEMBLY/assembly_primary.fa \
 polypolish reports (on the screen) how many positions it changed. Few changes
 mean that the long-read assembly was already accurate. The polished assembly,
 `05_POLISH/polished.fa`, has the same contigs, with corrected bases.
+
+Generally, expect a relatively small number of changes, but they can have a
+large effect on the predicted proteins especially if they fix frameshifts.
 :::
 
 ::: instructor
@@ -501,13 +508,12 @@ SemiBin2 single_easy_bin \
 
 ::: handout
 `--environment soil` uses a model pretrained on soil samples instead of
-training one on this sample, which would be slower and, on a dataset as small
-as ours, may be unstable.
+training one on this sample, which would be slower.
 :::
 
 ## Look at the bins
 
-Each bin (a draft genome) is a FASTA file in `07_BINNING/output_bins/`.
+Each bin is a FASTA file in `07_BINNING/output_bins/`.
 
 - How many bins are there, and how large are they?
 - `07_BINNING/bins_info.tsv`: size, number of contigs, N50
