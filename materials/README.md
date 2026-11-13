@@ -13,7 +13,12 @@ From the repository root:
 pixi run -e docs materials           # everything, into materials/build/
 pixi run -e docs check-materials     # fail if instructor notes leaked into the student handout
 pixi run check-commands              # every metag-ws command is in the notes, verbatim
+pixi run -e docs site                # the GitHub Pages site (site.sh), in materials/build/site/
 ```
+
+The site (an index page, the deck and the handouts) is published to
+<https://luispedro.github.io/metag-workshops/> on every push to `main`
+(`../.github/workflows/pages.yml`).
 
 or, for a single target, `pixi run -e docs make -C materials slides`
 (`handouts`, `html`, `slides-pdf`, `docx`, `clean`). The first build needs

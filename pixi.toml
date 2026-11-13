@@ -61,6 +61,7 @@ eggnog-mapper = ">=2.1.15,<3"
 # source into the slides and the handouts. Not needed on the workshop machine.
 #   pixi run -e docs materials          # deck + both handouts (PDF and HTML)
 #   pixi run -e docs check-materials    # no instructor notes in the handout
+#   pixi run -e docs site               # the GitHub Pages site (.github/workflows/pages.yml)
 # Tectonic fetches LaTeX packages on first use, and the first deck build
 # fetches reveal.js, so the first build needs network.
 [feature.docs.dependencies]
@@ -80,6 +81,8 @@ python = ">=3.13"
 materials = "make -C materials"
 check-materials = "make -C materials check"
 clean-materials = "make -C materials clean"
+# GitHub Pages: the deck, the handouts and an index page, in materials/build/site/
+site = "bash materials/site.sh"
 
 [environments]
 eggnog = { features = ["eggnog"], no-default-feature = true }

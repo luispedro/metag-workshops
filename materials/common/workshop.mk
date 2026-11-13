@@ -250,7 +250,7 @@ check: student slides $(BUILD)/$(STEM)__student.html
 # Copy this workshop's outputs into a site tree (in vibe-workshops,
 # common/site.sh runs this for every workshop and writes the index page).
 SITE     ?= ../build/site
-SITE_DIR := $(SITE)/$(notdir $(CURDIR))
+SITE_DIR ?= $(SITE)/$(notdir $(CURDIR))
 SITE_FILES := $(BUILD)/$(STEM)__slides.html \
               $(BUILD)/$(STEM)__student.html $(BUILD)/$(STEM)__student.pdf \
               $(BUILD)/$(STEM)__instructor.html $(BUILD)/$(STEM)__instructor.pdf \

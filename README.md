@@ -20,6 +20,9 @@ finishes in minutes.
 
 ## Attending?
 
+The slides and notes, including a web version with a copy button on every
+command, are at <https://luispedro.github.io/metag-workshops/>.
+
 Everything (data, software, databases) is set up on the workshop machine:
 you only need a laptop with an SSH client and a web browser, and to be
 comfortable with the shell.
@@ -47,6 +50,9 @@ of the installation; their paths are set in `pixi.toml` (`[activation.env]`).
 pixi run -e docs materials           # slides + student and instructor handouts
 pixi run -e docs check-materials     # no instructor notes in the student handout
 pixi run check-commands              # the notes match the commands of metag-ws
+pixi run -e docs site                # the GitHub Pages site, in materials/build/site/
 ```
 
-Outputs are in `materials/build/`. See [`materials/README.md`](materials/README.md).
+Outputs are in `materials/build/`. On every push to `main`,
+`.github/workflows/pages.yml` publishes the site to
+<https://luispedro.github.io/metag-workshops/>. See [`materials/README.md`](materials/README.md).
