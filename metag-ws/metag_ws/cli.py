@@ -20,7 +20,6 @@ machine):
     METAG_WS_THREADS      threads per participant (8)
 """
 import argparse
-import csv
 import glob
 import json
 import os
@@ -39,8 +38,7 @@ from rich.table import Table
 
 STEPS_FILE = Path(__file__).with_name('steps.toml')
 PRECOMPUTED_SUFFIX = '_precomputed'
-MAG_PLACEHOLDER = 'BIN_NAME'
-PLACEHOLDER = re.compile(r'\{(\d+(?:\.\d+)?|threads|threads_fastp|data|mag)\}')
+PLACEHOLDER = re.compile(r'\{(\d+(?:\.\d+)?|threads|threads_fastp|data)\}')
 # databases that the commands use through environment variables (set by pixi)
 DB_VARS = ['SINGLEM_METAPACKAGE_PATH', 'CHECKM2DB', 'GUNC_DB', 'EGGNOG_DATA_DIR']
 
@@ -193,37 +191,10 @@ def folder_of(ref, current, ctx):
     return ref.folder + (PRECOMPUTED_SUFFIX if is_precomputed(ref, current, ctx) else '')
 
 
-def best_mag(report):
-    """Best bin by completeness - 5 x contamination (as in pipeline.sh)."""
-    best = None
-    with open(report, newline='') as f:
-        for row in csv.DictReader(f, delimiter='\t'):
-            score = float(row['Completeness']) - 5 * float(row['Contamination'])
-            if best is None or score > best[1]:
-                best = (row['Name'], score, row['Completeness'], row['Contamination'])
-    return best
-
-
 class Renderer:
     def __init__(self, steps, ctx):
         self.steps = steps
         self.ctx = ctx
-        self._mag = {}
-
-    def mag(self, current):
-        """(name, info) of the bin to annotate, from the CheckM2 report that
-        `current` reads; name is MAG_PLACEHOLDER if there is no report."""
-        folder = folder_of(self.steps.by_id['8'], current, self.ctx)
-        if folder not in self._mag:
-            report = self.ctx.workdir / folder / 'quality_report.tsv'
-            best = best_mag(report) if report.exists() else None
-            if best is None:
-                self._mag[folder] = (MAG_PLACEHOLDER, None)
-            else:
-                name, score, comp, cont = best
-                self._mag[folder] = (name, f'{name} is the best bin in {folder}/quality_report.tsv: '
-                                     f'{comp} - 5 x {cont} = {score:.1f}')
-        return self._mag[folder]
 
     def render(self, text, current):
         def sub(m):
@@ -234,8 +205,6 @@ class Renderer:
                 return str(min(self.ctx.threads, 16))
             if key == 'data':
                 return self.ctx.data
-            if key == 'mag':
-                return self.mag(current)[0]
             return folder_of(self.steps.by_id[key], current, self.ctx)
         return PLACEHOLDER.sub(sub, text)
 
@@ -247,8 +216,6 @@ class Renderer:
         refs = set()
         for c in st.cmds:
             refs.update(r for r in PLACEHOLDER.findall(c['run']) if r[0].isdigit() and r != st.id)
-        if 'mag' in ''.join(c['run'] for c in st.cmds):
-            refs.add('8')
         return sorted((self.steps.by_id[r] for r in refs), key=lambda s: step_key(s.id))
 
     def missing_inputs(self, st):
@@ -267,12 +234,6 @@ class Renderer:
         if pre:
             lines.append(f'# Using precomputed inputs: {", ".join(pre)} '
                          f'(metag-ws results-for {self.ctx.upto})')
-        if any('{mag}' in c['run'] for c in st.cmds):
-            name, info = self.mag(st)
-            if info:
-                lines.append(f'# {info}')
-            else:
-                lines.append(f'# Replace {MAG_PLACEHOLDER} with the name of a bin from the CheckM2 report (step 8)')
         return lines
 
 
@@ -475,12 +436,10 @@ def run_all(argv):
         if done.exists():
             print(f'== {leaf.id}: already done, skipping', flush=True)
         else:
-            r = Renderer(steps, ctx)   # new each time: the MAG depends on step 8
+            r = Renderer(steps, ctx)
             for ref, folder in r.missing_inputs(leaf):
                 raise UserError(f'step {leaf.id}: outputs of step {ref.id} missing in {folder}/')
             script = '\n'.join(r.header(leaf) + r.commands(leaf))
-            if MAG_PLACEHOLDER in script:
-                raise UserError(f'step {leaf.id}: no bin to annotate')
             print(f'== {leaf.id}: starting {time.strftime("%Y-%m-%dT%H:%M:%S")}\n{script}', flush=True)
             t0 = time.time()
             proc = subprocess.Popen(['bash', '-euo', 'pipefail', '-c', script], cwd=workdir)

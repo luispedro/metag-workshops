@@ -127,11 +127,12 @@ commands of every step and how to use `metag-ws`. Not done yet:
    `bash -c`/`/usr/bin/time` wrappers, concrete file names
    (`01_DATA/sample_R1.fq.gz`), the thread count from the machine
    configuration, database paths as the environment variables set by pixi
-   (`$CHECKM2DB`, ...). Step 12 shows the command for a named MAG instead
-   of the `awk` one-liner: the best bin (completeness − 5 × contamination)
-   in the CheckM2 report that step 12 reads (own or precomputed), filled in
-   by `metag-ws` (and the same in `_run-all`, whose bins may be named
-   differently). `explain-cmd` explains how to choose it from that report.
+   (`$CHECKM2DB`, ...). Step 12 sets a shell variable, `BIN_NAME`, to the
+   best bin (completeness − 5 × contamination) in the CheckM2 report that
+   step 12 reads (own or precomputed) with an `awk` one-liner, and uses
+   `$BIN_NAME` in the command. It always works as it is, with no editing
+   (bins may be named differently in each run), and participants can set
+   `BIN_NAME` themselves to annotate another bin.
    eggNOG-mapper is in its own pixi environment, and step 12 shows this
    instead of hiding it (a chance to show `pixi run -e`): `pixi run -e
    eggnog emapper.py ...`, which works from `~/workshop` because pixi finds

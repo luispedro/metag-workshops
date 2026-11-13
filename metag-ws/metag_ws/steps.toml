@@ -13,7 +13,6 @@
 #   {threads}        threads per participant (METAG_WS_THREADS)
 #   {threads_fastp}  the same, at most 16 (fastp uses at most 16)
 #   {data}           shared directory with the workshop reads (METAG_WS_DATA)
-#   {mag}            the bin annotated in step 12 (best in the CheckM2 report)
 # Shell variables are written as $NAME, not ${NAME}.
 #
 # `outputs`: files (relative to the step's folder; globs allowed) that a
@@ -466,26 +465,30 @@ folder = "12_EGGNOG"
 title = "Functional annotation (eggNOG-mapper)"
 outputs = ["*.emapper.annotations"]
 look_at = """
-{12}/{mag}.emapper.annotations: one line per protein with its best match,
+{12}/$BIN_NAME.emapper.annotations: one line per protein with its best match,
 description, gene name (Preferred_name), COG category, KEGG orthologs and
 pathways, CAZy families, ... Look for a function, e.g.:
-grep -i nitrogenase {12}/{mag}.emapper.annotations | cut -f1,8,9
+grep -i nitrogenase {12}/$BIN_NAME.emapper.annotations | cut -f1,8,9
 How many proteins have an annotation? Which COG categories are most common?"""
 
 [[step.cmd]]
 run = """
+BIN_NAME=$(awk -F'\\t' 'NR > 1 { print $2 - 5 * $3, $1 }' {8}/quality_report.tsv \\
+    | sort -gr | head -n 1 | cut -d' ' -f2)
+echo $BIN_NAME
 mkdir -p {12}
 pixi run -e eggnog emapper.py \\
-    -i {11}/{mag}.faa --itype proteins \\
+    -i {11}/$BIN_NAME.faa --itype proteins \\
     -m diamond \\
     --data_dir $EGGNOG_DATA_DIR \\
-    -o {mag} --output_dir {12} \\
+    -o $BIN_NAME --output_dir {12} \\
     --temp_dir {12} \\
     --cpu {threads} --override"""
 explain = [
     ["pixi run -e eggnog", "eggNOG-mapper is installed in its own pixi environment, eggnog: it needs an older version of DIAMOND than GUNC, and one environment cannot have both. `pixi run -e eggnog` runs a command in that environment (all the other tools are in the default one, which is already active). pixi finds the workshop project through $PIXI_PROJECT_MANIFEST, set when the environment is activated, so this works from any folder"],
     ["emapper.py", "eggNOG-mapper: annotates proteins by finding their closest match among the eggNOG orthologous groups and transferring that group's functional annotation (names, GO terms, KEGG, CAZy, ...)"],
-    ["{mag}", "we annotate a single bin, {mag}: annotating all bins takes ~15 minutes. It is the best bin in the CheckM2 report ({8}/quality_report.tsv), by completeness - 5 x contamination. You can choose another one there: open the report, pick a bin with high completeness and low contamination, and use its name instead"],
+    ["BIN_NAME=$(...)", "we annotate a single bin: annotating all bins takes ~15 minutes. This sets the shell variable BIN_NAME to the best bin in the CheckM2 report ({8}/quality_report.tsv), by completeness - 5 x contamination: awk computes the score of each bin, sort -gr puts the highest first, and head/cut keep its name. To annotate another bin, set the variable yourself instead (e.g., BIN_NAME=SemiBin_2). If you open a new terminal, set it again before looking at the annotations"],
+    ["$BIN_NAME", "the value of the variable: the name of the bin"],
     ["-i ... --itype proteins", "input: the proteins of the bin (step 11)"],
     ["-m diamond", "search with DIAMOND (fast protein alignment) against the eggNOG proteins"],
     ["--data_dir $EGGNOG_DATA_DIR", "the eggNOG database, already installed"],

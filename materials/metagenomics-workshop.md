@@ -650,25 +650,33 @@ Do larger bins have more genes? About how many genes per Mbp?
 
 ## Annotate one bin
 
-Annotating all bins takes too long, so pick one: a bin with high completeness
-and low contamination in `08_CHECKM2/quality_report.tsv`.
+Annotating all bins takes too long, so we annotate one: the first command
+picks the best bin in `08_CHECKM2/quality_report.tsv` (highest completeness −
+5 × contamination).
 
 ```bash
+BIN_NAME=$(awk -F'\t' 'NR > 1 { print $2 - 5 * $3, $1 }' 08_CHECKM2/quality_report.tsv \
+    | sort -gr | head -n 1 | cut -d' ' -f2)
+echo $BIN_NAME
 mkdir -p 12_EGGNOG
 pixi run -e eggnog emapper.py \
-    -i 11_GENES/BIN_NAME.faa --itype proteins \
+    -i 11_GENES/$BIN_NAME.faa --itype proteins \
     -m diamond \
     --data_dir $EGGNOG_DATA_DIR \
-    -o BIN_NAME --output_dir 12_EGGNOG \
+    -o $BIN_NAME --output_dir 12_EGGNOG \
     --temp_dir 12_EGGNOG \
     --cpu 8 --override
 ```
 
-Replace `BIN_NAME` (twice) with the name of your bin, e.g. `SemiBin_2`.
+To annotate another bin, set the variable yourself instead, e.g.
+`BIN_NAME=SemiBin_2`.
 
 ::: handout
-`metag-ws show-cmd 12` fills in the best bin for you (by completeness − 5 ×
-contamination).
+`BIN_NAME=...` sets a shell variable; `$BIN_NAME` uses it. `$(...)` runs a
+command and uses its output: here, `awk` computes the score of each bin,
+`sort -gr` puts the highest first, and `head`/`cut` keep the name of the top
+one. Shell variables are lost when you close the terminal: if you open a new
+one, set `BIN_NAME` again before looking at the annotations.
 
 eggNOG-mapper is installed in its own environment (`eggnog`), because it
 needs a different version of one of its dependencies (DIAMOND) than GUNC.
@@ -677,14 +685,14 @@ needs a different version of one of its dependencies (DIAMOND) than GUNC.
 
 ## Look at the annotations
 
-`12_EGGNOG/BIN_NAME.emapper.annotations`: one line per protein, with its gene
+`12_EGGNOG/$BIN_NAME.emapper.annotations`: one line per protein, with its gene
 name (`Preferred_name`), description, COG category, KEGG orthologs and
 pathways, CAZy families, …
 
 Look for a function:
 
 ```bash
-grep -i nitrogenase 12_EGGNOG/BIN_NAME.emapper.annotations | cut -f1,8,9
+grep -i nitrogenase 12_EGGNOG/$BIN_NAME.emapper.annotations | cut -f1,8,9
 ```
 
 - How many proteins have an annotation?
