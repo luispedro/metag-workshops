@@ -6,14 +6,18 @@
 #
 # Usage:
 #   pixi run bash scripts/pipeline.sh -1 R1.fq.gz -2 R2.fq.gz -l ont.fq.gz -o OUTDIR \
-#       [-t THREADS] [--until STEP | --only STEP] [--cleanup]
+#       [-t THREADS] [-m MEMORY_GB] [--until STEP | --only STEP] [--cleanup]
 #       [--precomputed RUN --fake STEP,...]
 #
 # Steps (in order):
 #   qc_sr qc_lr profile_sr profile_lr assemble polish_aln_r1 polish_aln_r2
 #   polish map bin checkm2 gunc appraise genes eggnog
+# Extra steps (not part of the workshop; only run with --only):
+#   assemble_sr     short-read only assembly (MEGAHIT; needs qc_sr), to
+#                   compare with the long-read one (scripts/data_stats.py)
 # --only runs a single step (used to split the full-data run into queue jobs,
 # see jugfile.py); the steps it needs must already be done.
+# -m: memory available to the step, in GB (only used by assemble_sr).
 # Each finished step is recorded in OUTDIR/.done/STEP; rerunning skips it,
 # so a killed job can simply be resubmitted. Per-step wall-clock time and peak
 # memory go to OUTDIR/timings.tsv.
@@ -26,14 +30,16 @@ set -euo pipefail
 REPO=$(cd "$(dirname "$0")/../.." && pwd)   # the repository root (pixi.toml)
 STEPS=(qc_sr qc_lr profile_sr profile_lr assemble polish_aln_r1 polish_aln_r2
        polish map bin checkm2 gunc appraise genes eggnog)
+EXTRA_STEPS=(assemble_sr)
 THREADS=8
+MEMORY_GB=
 UNTIL=eggnog
 CLEANUP=0
 FAKE=
 PRECOMPUTED=
 ONLY=
 
-usage() { sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
+usage() { sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -42,6 +48,7 @@ while [[ $# -gt 0 ]]; do
         -l) LR=$(realpath "$2"); shift 2 ;;
         -o) OUT=$2; shift 2 ;;
         -t) THREADS=$2; shift 2 ;;
+        -m) MEMORY_GB=$2; shift 2 ;;
         --until) UNTIL=$2; shift 2 ;;
         --only) ONLY=$2; shift 2 ;;
         --cleanup) CLEANUP=1; shift ;;
@@ -53,7 +60,7 @@ while [[ $# -gt 0 ]]; do
 done
 [[ -n "${SR1:-}" && -n "${SR2:-}" && -n "${LR:-}" && -n "${OUT:-}" ]] || usage
 [[ " ${STEPS[*]} " == *" $UNTIL "* ]] || { echo "Unknown step: $UNTIL" >&2; exit 1; }
-[[ -z "$ONLY" || " ${STEPS[*]} " == *" $ONLY "* ]] || { echo "Unknown step: $ONLY" >&2; exit 1; }
+[[ -z "$ONLY" || " ${STEPS[*]} ${EXTRA_STEPS[*]} " == *" $ONLY "* ]] || { echo "Unknown step: $ONLY" >&2; exit 1; }
 if [[ -n "$FAKE" ]]; then
     [[ -d "$PRECOMPUTED" ]] || { echo "--fake needs --precomputed RUN" >&2; exit 1; }
     for s in ${FAKE//,/ }; do
@@ -120,6 +127,19 @@ step_assemble() {
         echo "myloasm did not produce assembly_primary.fa" >&2; return 1; }
     ln -sf myloasm/assembly_primary.fa assembly/draft.fa
     bwa index assembly/draft.fa
+}
+
+# (extra) Short-read only assembly, for comparison with the long-read one. A
+# soil sample needs the meta-large preset. MEGAHIT checkpoints each k-mer
+# size: if the job is killed (e.g., wall time), rerunning continues from there.
+step_assemble_sr() {
+    mkdir -p assembly_sr
+    local opts=(--presets meta-large -t "$THREADS" --tmp-dir "$TMP")
+    # by default, MEGAHIT takes 90% of the machine's memory, not of the job's
+    [[ -n "$MEMORY_GB" ]] && opts+=(-m "$(( MEMORY_GB * 1000000000 ))")
+    [[ -d assembly_sr/megahit ]] && opts+=(--continue)
+    megahit -1 qc/sr_R1.fq.gz -2 qc/sr_R2.fq.gz -o assembly_sr/megahit "${opts[@]}"
+    ln -sf megahit/final.contigs.fa assembly_sr/contigs.fa
 }
 
 # 3b. Short-read polishing: each read end mapped separately, all alignments
@@ -241,6 +261,7 @@ outputs_of() {
         profile_sr) echo profile/sr.* ;;
         profile_lr) echo profile/lr.* ;;
         assemble) echo assembly/myloasm assembly/draft.fa assembly/draft.fa.* ;;
+        assemble_sr) echo assembly_sr ;;
         polish_aln_r1) echo polish/aln_R1.sam ;;
         polish_aln_r2) echo polish/aln_R2.sam ;;
         polish) echo polish assembly/polished.fa ;;
@@ -278,7 +299,7 @@ run_step() {
         echo 0 > .done/$s.rss
     else
         # /usr/bin/time reports peak memory (of the largest process) for the step
-        /usr/bin/time -f '%M' -o .done/$s.rss bash -c "$(declare -f step_$s); $(declare -p REPO SR1 SR2 LR THREADS CLEANUP TMP); set -euo pipefail; step_$s"
+        /usr/bin/time -f '%M' -o .done/$s.rss bash -c "$(declare -f step_$s); $(declare -p REPO SR1 SR2 LR THREADS MEMORY_GB CLEANUP TMP); set -euo pipefail; step_$s"
     fi
     local secs=$(( $(date +%s) - t0 ))
     printf '%s\t%d\t%.1f\t%s\n' "$s" "$secs" "$(awk '{print $1/1048576}' .done/$s.rss)" "$mode" >> timings.tsv

@@ -12,6 +12,7 @@ needed to attend or run the workshop. The goals are in
 | `jug_hpc.toml` | resources per task for [jug_hpc](https://github.com/luispedro/jug_hpc); `tests/jug_hpc.toml` for test mode |
 | `scripts/pipeline.sh` | the pipeline used to build and validate the dataset (`step_*` functions); writes `timings.tsv` |
 | `scripts/select_bins.py`, `make_subset.sh`, `select_reads.py`, `validate.py` | bin selection, read extraction, validation |
+| `scripts/data_stats.py` | read length histograms, read numbers before/after QC and assembly statistics of a run (default `runs/full/stats/`) |
 | `scripts/run_precomputed.sh` | the precomputed results: every `metag-ws` command, on the workshop dataset, into `precomputed/` |
 | `scripts/hpc/` | queue submission from the mqyolo sandbox (`qsub` shim, worker setup) |
 | `tests/` | simulated 3-genome community (`smoke_test.sh`) and end-to-end tests (`pixi run submit-test`, `run_all_sim.sh`) |

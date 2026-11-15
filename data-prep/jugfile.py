@@ -115,6 +115,15 @@ def full_profile_lr(inputs, _after):
 def full_assemble(inputs, _after):
     return pipeline_step('assemble', inputs)
 
+# memory of the full_assemble_sr job (jug_hpc.toml), minus some headroom
+ASSEMBLE_SR_MEMORY_GB = 450
+
+@TaskGenerator
+def full_assemble_sr(inputs, _after):
+    """Short-read only assembly (MEGAHIT), to compare with the long-read one
+    (scripts/data_stats.py). Nothing else depends on it."""
+    return pipeline_step('assemble_sr', inputs, '-m', ASSEMBLE_SR_MEMORY_GB)
+
 @TaskGenerator
 def full_polish_aln(inputs, read, _after):
     """`bwa mem -a` of one read end (read: 'r1' or 'r2') vs. the draft"""
@@ -216,6 +225,7 @@ qc_lr = full_qc_lr(FULL_INPUTS)
 profile_sr = full_profile_sr(FULL_INPUTS, qc_sr)
 profile_lr = full_profile_lr(FULL_INPUTS, qc_lr)
 assembled = full_assemble(FULL_INPUTS, qc_lr)
+assembled_sr = full_assemble_sr(FULL_INPUTS, qc_sr)
 polish_aln = [full_polish_aln(FULL_INPUTS, read, [assembled, qc_sr]) for read in ('r1', 'r2')]
 polished = full_polish(FULL_INPUTS, polish_aln)
 mapped = full_map(FULL_INPUTS, polished)

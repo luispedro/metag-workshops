@@ -44,6 +44,15 @@ cpus   = 64
 memory = "500G"
 time   = "48h"
 
+# MEGAHIT (meta-large) on all short reads; not needed for the workshop dataset.
+# If it hits the wall time, rerun it: it continues from its last checkpoint.
+# The pipeline is told 450G (ASSEMBLE_SR_MEMORY_GB in jugfile.py).
+[class.assemble_sr]
+match  = "full_assemble_sr"
+cpus   = 64
+memory = "500G"
+time   = "48h"
+
 # bwa mem -a, one task per read end (the draft's index is ~15 GB), in parallel
 [class.polish_aln]
 match   = "full_polish_aln"

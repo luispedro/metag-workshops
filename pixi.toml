@@ -39,6 +39,8 @@ gunc = ">=1.1.1,<2"
 pyrodigal = ">=3.7.1,<4"
 seqkit = ">=2.14.0,<3"
 myloasm = ">=0.7.0,<0.8"
+# short-read only assembly of the full data (data-prep), for comparison
+megahit = ">=1.2.9,<2"
 skani = ">=0.4.0,<0.5"
 pandas = ">=3.0.6,<4"
 rich = ">=15.0.0,<16"
