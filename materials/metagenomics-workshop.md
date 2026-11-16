@@ -106,6 +106,22 @@ from this dataset!**
 
 # Working on the workshop machine
 
+## Visual conventions
+
+This workshop contains both conceptual material and hands-on exercises.
+
+A slide that looks like this one is on the conceptual side.
+
+## Visual conventions II: hands-on exercises
+
+A slide that looks like this one is a hands-on exercise: it contains commands to run.
+
+```bash
+echo "Hello, world!"
+```
+
+You will run the commands on either a virtual machine or on your own laptop.
+
 ## Getting started
 
 Log in to the workshop machine, then make your workshop folder and go into it:
