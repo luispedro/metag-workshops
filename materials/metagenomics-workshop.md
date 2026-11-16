@@ -573,6 +573,113 @@ assembled.
 
 # Step 7: Binning (SemiBin2)
 
+## The metagenomics binning problem
+
+::: slides
+:::: r-stack
+::::: {.fragment .fade-out data-fragment-index="1"}
+![](media/binning1.svg)
+:::::
+::::: {.fragment .fade-in-then-out data-fragment-index="1"}
+![](media/binning2.svg)
+:::::
+::::: {.fragment .fade-in-then-out data-fragment-index="2"}
+![](media/binning3.svg)
+:::::
+::::: {.fragment .fade-in-then-out data-fragment-index="3"}
+![](media/binning4.svg)
+:::::
+::::: {.fragment .fade-in data-fragment-index="4"}
+![](media/binning4_with_errors.svg)
+:::::
+::::
+
+::::: {.fragment data-fragment-index="4"}
+Bins can be wrong: a yellow contig in the green bin is *contamination*
+(Step 8).
+:::::
+:::
+
+::: handout
+A sample contains many organisms, each with its own genome. Sequencing
+breaks these genomes into reads that are much shorter than the genomes, and
+the reads of all organisms are mixed together. Assembly joins the reads back
+into *contigs*, but rarely into complete chromosomes: we get many contigs per
+genome, and nothing says which contig came from which organism. *Binning*
+groups the contigs into *bins*, each meant to be one genome (a *MAG*,
+metagenome-assembled genome). Some contigs stay unbinned, and bins can be
+wrong: a bin with contigs from another organism is *contaminated* (Step 8).
+:::
+
+## Binning is a clustering problem
+
+- We have a set of contigs
+- We want to group them into bins, one per genome
+
+::: fragment
+Contigs from the same genome look alike in
+
+- **abundance**: they have similar coverage (here, from the mapping of Step 6)
+- **_k_-mer composition**: each genome has its own frequencies of short words
+:::
+
+::: fragment
+**_k_-mers** of `ATGTGCTAG`, for _k_ = 4:
+[`ATGT` `TGTG` `GTGC` `TGCT` `GCTA` `CTAG`]{.tokens}
+
+Count how often each _k_-mer appears in each contig.
+:::
+
+## We can also classify contigs
+
+::: slides
+:::: r-stack
+::::: {.fragment .fade-out data-fragment-index="1"}
+![](media/binning_ref_no_errors.svg)
+:::::
+::::: {.fragment .fade-in data-fragment-index="1"}
+![](media/binning_ref.svg)
+:::::
+::::
+
+:::: fragment
+Classifying against a reference database makes errors, and in a typical
+metagenome **most** contigs cannot be classified at all.
+::::
+:::
+
+::: handout
+An alternative to binning is to classify each contig taxonomically by
+comparing it to a reference database. Classification makes mistakes, and it
+only works for organisms that are close to something in the database: in
+most environments (soil in particular) the majority of contigs stay
+unclassified. Binning needs no reference, so it can recover genomes of
+organisms that have never been seen before.
+:::
+
+## What SemiBin2 does
+
+- Represents each contig by its _k_-mer composition and its abundance
+- Learns a transformation (an *embedding*) in which contigs that should go
+  together are close, using *contrastive learning*:
+  - two fragments of the same contig should end up together (*must-link*)
+  - two contigs picked at random most likely should not (*cannot-link*)
+- Clusters the contigs in the embedded space
+
+::: fragment
+Learning the embedding is slow: `--environment soil` instead uses a model
+already trained on soil samples.
+:::
+
+::: handout
+SemiBin2 is *self-supervised*: the pairs it learns from are generated from
+the data itself, with no reference database. Random pairs of contigs are
+occasionally from the same genome, but rarely enough that learning still
+works. Pretrained models are available for several environments (human gut,
+ocean, soil, ...); one trained on similar samples works nearly as well as one
+trained on yours.
+:::
+
 ## Bin the contigs
 
 ```bash
@@ -606,7 +713,9 @@ seqkit stats 07_BINNING/output_bins/*.fa
 ```
 
 ::: instructor
-TODO: background on binning (composition + coverage); what SemiBin2 does.
+Background on binning is in the slides before *Bin the contigs*: the problem,
+the features (composition + coverage), classification vs. binning, and what
+SemiBin2 does.
 :::
 
 # Step 8: Completeness and contamination (CheckM2)

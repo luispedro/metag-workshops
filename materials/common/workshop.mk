@@ -54,7 +54,7 @@ FIGS_PNG      := $(FIG_SCRIPTS:%.py=$(BUILD)/%.png)
 RESOURCES     := --resource-path=.:$(BUILD)
 # Static images (screenshots and the like) are referenced with their extension,
 # ![](media/NAME.png), and used as-is; listed here only so editing one rebuilds.
-MEDIA_STATIC  := $(wildcard media/*.png media/*.jpg media/*.jpeg)
+MEDIA_STATIC  := $(wildcard media/*.png media/*.jpg media/*.jpeg media/*.svg)
 
 SLIDE_DEPS    := $(SRC) $(FILTERS)/slides.lua $(STYLE)/slides.css $(CUES_DEPS) \
                  $(FILTERS)/diagram.lua $(MEDIA_STATIC)
