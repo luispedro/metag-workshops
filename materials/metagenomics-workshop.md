@@ -387,6 +387,24 @@ TODO: background on SingleM (marker genes, OTU tables, GTDB), and why a
 read-based profile sees organisms that assembly misses.
 :::
 
+# Long vs. short reads
+
+- Long reads are long, but each base pair has lower quality
+- Short reads can be used to fix these errors, termed _polishing_
+
+# How to assemble?
+
+Different options
+
+1. Assemble long reads, use short reads to polish assembly
+2. Assemble short reads, use long reads to scaffold
+3. Polish long reads, assemble the polished long reads
+4. Hybrid assemblers
+
+The term _hybrid assembly_ is sometimes used to refer specifically to using a
+specialised hybrid assembler or for the general concept of using long and short
+reads.
+
 # Step 4: Long-read assembly (myloasm)
 
 ## Assemble the long reads
