@@ -1030,6 +1030,41 @@ singlem appraise \
 
 # Step 11: Gene prediction (pyrodigal)
 
+## Functional annotation, in three steps
+
+::: slides
+:::: r-stack
+::::: {.fragment .fade-out data-fragment-index="1"}
+![](media/annotation_genes.svg)
+:::::
+::::: {.fragment .fade-in-then-out data-fragment-index="1"}
+![](media/annotation_database.svg)
+:::::
+::::: {.fragment .fade-in data-fragment-index="2"}
+![](media/annotation_judgement.svg)
+:::::
+::::
+:::
+
+::: handout
+![Functional annotation: predict the genes (ORFs) on the contigs, compare
+them to a database of genes of known function, and filter the hits (the
+dashed gene is one whose annotation did not pass).](media/annotation){width="65%"}
+
+Annotating the functions of a MAG takes three steps:
+
+1. **Predict the genes** (open reading frames, ORFs) on the contigs, with
+   Prodigal or Pyrodigal (this step).
+2. **Annotate the genes**, by comparing them to a database of genes whose
+   function is known. eggNOG-mapper (Step 12) is generic; other tools are
+   specialised, such as RGI for antibiotic resistance genes, with its own
+   database (CARD).
+3. **Use informed human judgement.** Every tool reports some hits that are
+   wrong: matches just above (or, if you ask for them, below) a threshold, or
+   genes out of context, such as a regulator found without the genes it
+   regulates. Filter the annotations before drawing conclusions from them.
+:::
+
 ## Predict genes in each bin
 
 ```bash
