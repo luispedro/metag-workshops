@@ -908,6 +908,55 @@ MIMAG is a community standard for reporting MAGs
 
 # Step 9: Chimerism (GUNC)
 
+## GUNC: do the taxa follow the contigs?
+
+::: slides
+:::: r-stack
+::::: {.fragment .fade-out data-fragment-index="1"}
+![](media/gunc_spread.svg)
+:::::
+::::: {.fragment .fade-in data-fragment-index="1"}
+![](media/gunc_chimeric.svg)
+:::::
+::::
+
+Classify each gene to a taxon: the classifier makes mistakes, but *where*
+they are tells noise from a chimera.
+:::
+
+::: handout
+![GUNC's intuition: two bins with the same genes, classified to the same
+taxa. When the B genes are spread over the contigs, they are mistakes of the
+classifier; when they are on their own contigs, those contigs likely come from
+another genome (a chimera).](media/gunc){width="65%"}
+
+GUNC ([Orakov et al., 2021](https://doi.org/10.1186/s13059-021-02393-0))
+classifies every gene of a bin to a taxon. If classifiers were perfect, a clean
+bin would have only one taxon, and a chimera would have more than one. In fact,
+if classifiers were perfect, we would not need binning at all!
+
+Classifiers make mistakes because the reference databases are incomplete, but
+GUNC uses the pattern of the mistakes to distinguish a clean bin from a chimera.
+
+In particular, GUNC looks at how the taxa classifications
+are spread over the contigs. In a chimera, the taxonomic classifications of
+genes should follow the contig boundaries (not perfectly, but better than
+random). In a clean genome, the errors will be scattered across the contigs.
+
+The *clade separation score* (CSS) measures this, at every taxonomic level: how
+well the contigs separate the taxa, compared to what would be expected by
+chance. How the intuition was turned into a mathematical score is explained in
+a [blog post](https://www.big-data-biology.org/blog/2021/02/12/gunc/).
+
+GUNC is intended to complement CheckM2, not replace it.
+:::
+
+::: instructor
+Step through the figure: before showing the second bin, ask the room whether
+the first is contaminated. Both bins have exactly the same genes and the same
+taxa; only where the B genes are changes.
+:::
+
 ## Run GUNC
 
 ```bash
@@ -937,10 +986,6 @@ cut -f1,2,8,9,13 09_GUNC/GUNC.progenomes_2.1.maxCSS_level.tsv | column -t
   were mixed (a chimera)
 
 Do the bins that CheckM2 calls high quality pass GUNC?
-
-::: instructor
-TODO: what chimerism is, and why CheckM2 can miss it.
-:::
 
 # Step 10: What did the bins capture? (SingleM appraise)
 
