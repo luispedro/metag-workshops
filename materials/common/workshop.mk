@@ -52,9 +52,18 @@ FIGS_SVG      := $(FIG_SCRIPTS:%.py=$(BUILD)/%.svg)
 FIGS_PDF      := $(FIG_SCRIPTS:%.py=$(BUILD)/%.pdf)
 FIGS_PNG      := $(FIG_SCRIPTS:%.py=$(BUILD)/%.png)
 RESOURCES     := --resource-path=.:$(BUILD)
+# Static SVG figures, media/NAME.svg, are converted by rsvg-convert into
+# $(BUILD)/media/NAME.{pdf,png}, so they too can be referenced with no
+# extension, ![](media/NAME), from every target: the HTML outputs find the SVG
+# itself in media/, the PDF and docx ones the conversions under $(BUILD).
+# (Referenced with the extension, ![](media/NAME.svg), they are used as-is, as
+# the deck does for figures it steps through.)
+SVG_STATIC    := $(wildcard media/*.svg)
+FIGS_PDF      += $(SVG_STATIC:%.svg=$(BUILD)/%.pdf)
+FIGS_PNG      += $(SVG_STATIC:%.svg=$(BUILD)/%.png)
 # Static images (screenshots and the like) are referenced with their extension,
 # ![](media/NAME.png), and used as-is; listed here only so editing one rebuilds.
-MEDIA_STATIC  := $(wildcard media/*.png media/*.jpg media/*.jpeg media/*.svg)
+MEDIA_STATIC  := $(wildcard media/*.png media/*.jpg media/*.jpeg) $(SVG_STATIC)
 
 SLIDE_DEPS    := $(SRC) $(FILTERS)/slides.lua $(STYLE)/slides.css $(CUES_DEPS) \
                  $(FILTERS)/diagram.lua $(MEDIA_STATIC)
@@ -157,6 +166,13 @@ $(BUILD)/media/%.pdf: media/%.py
 $(BUILD)/media/%.png: media/%.py
 	@mkdir -p $(dir $@)
 	$(PYTHON) $< $@
+
+$(BUILD)/media/%.pdf: media/%.svg
+	@mkdir -p $(dir $@)
+	rsvg-convert -f pdf -o $@ $<
+$(BUILD)/media/%.png: media/%.svg
+	@mkdir -p $(dir $@)
+	rsvg-convert -f png -d 150 -p 150 -o $@ $<
 
 # --- slides ------------------------------------------------------------------
 

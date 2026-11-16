@@ -78,6 +78,8 @@ make = "*"
 graphviz = ">=14.1.2,<15"
 matplotlib-base = ">=3.11.2,<4"
 python = ">=3.13"
+# rsvg-convert: media/*.svg figures as PDF (handouts) and PNG (docx)
+librsvg = ">=2.62.4,<3"
 
 [feature.docs.tasks]
 materials = "make -C materials"

@@ -601,6 +601,9 @@ Bins can be wrong: a yellow contig in the green bin is *contamination*
 :::
 
 ::: handout
+![From the organisms in a sample, to short reads, to contigs, to
+bins.](media/binning){width="55%"}
+
 A sample contains many organisms, each with its own genome. Sequencing
 breaks these genomes into reads that are much shorter than the genomes, and
 the reads of all organisms are mixed together. Assembly joins the reads back
