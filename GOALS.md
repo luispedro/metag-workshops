@@ -147,6 +147,7 @@ The workshop will have different steps with substeps:
 10. SingleM appraise
 11. Gene prediction (pyrodigal)
 12. eggNOG-mapper
+13. GTDB-Tk (shown but not run due to runtime and memory requirements)
 
 To enable this, we want to add a special command, `metag-ws`, which has the
 following subcommands:
