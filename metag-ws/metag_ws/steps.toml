@@ -1,5 +1,5 @@
 # The workshop steps: what `metag-ws show-cmd`, `explain-cmd` and `results-for`
-# know about each step (PLAN.md, "metag-ws").
+# know about each step (PLAN.md, "`metag-ws`: design decisions").
 #
 # A [[step]] with an integer id ("5") is a workshop step with its own folder;
 # one with a dotted id ("5.1") is a substep and shares its step's folder. Only

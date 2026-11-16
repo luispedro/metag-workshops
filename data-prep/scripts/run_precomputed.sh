@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the precomputed results (PLAN.md, metag-ws Implementation 8): all
+# Builds the precomputed results (PLAN.md, "Precomputed bundle"): all
 # workshop commands, as `metag-ws show-cmd` prints them, on the workshop
 # dataset, into precomputed/ (resumable). In the queue (step 13, GTDB-Tk,
 # needs ~130 GB of RAM and 40 min; with --until 12, -m 64 is enough):
