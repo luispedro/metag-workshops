@@ -1169,6 +1169,51 @@ TODO: background on orthology-based annotation, and an exercise looking for
 a function across bins.
 :::
 
+## What about small proteins? {.lecture}
+
+- Proteins shorter than 100 amino acids were traditionally ignored: gene
+  predictors miss most of them, and databases have few
+- Catalogs of them now exist, such as the
+  [Global Microbial smORF Catalogue (GMSC)](https://gmsc.big-data-biology.org/):
+  ~965 million small ORFs (smORFs) from 63,410 metagenomes and 87,920 genomes
+- [GMSC-mapper](https://github.com/BigDataBiology/GMSC-mapper) finds and
+  annotates them in your own contigs or bins
+
+```{.dot width=95%}
+digraph gmsc_mapper {
+  rankdir=LR;
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,
+        fillcolor="#eceff1", color="#37474f"];
+  edge [color="#37474f"];
+  contigs [label="Contigs\nor bins"];
+  predict [label="Predict smORFs\npyrodigal"];
+  search  [label="Search GMSC\nDIAMOND or MMseqs2"];
+  annot   [label="Annotate\ntaxonomy, habitat,\ndomains, quality"];
+  contigs -> predict -> search -> annot;
+}
+```
+
+::: handout
+Small ORFs (smORFs, encoding fewer than 100 amino acids) are hard to predict:
+any random stretch of DNA contains many short ORFs, so gene predictors such as
+Prodigal (step 11) are tuned to skip most of them, and few have a known
+function. Yet some are real, conserved genes (for example, antimicrobial
+peptides and toxins). Large-scale studies of microbiomes, first in the human
+gut ([Sberro et al., 2019](https://doi.org/10.1016/j.cell.2019.07.016)) and
+then across habitats, have started to catalogue them.
+
+The [Global Microbial smORF Catalogue](https://gmsc.big-data-biology.org/)
+(GMSC; [Duan et al., 2024](https://doi.org/10.1038/s41467-024-51894-6)) holds
+~965 million non-redundant smORFs, from 63,410 public metagenomes and 87,920
+genomes, clustered into ~288 million families (at 90% amino acid identity).
+Each is annotated with its taxonomy, the habitats where it is found, conserved
+domains, cellular localisation and quality (evidence that it is a real gene).
+
+GMSC-mapper predicts the smORFs in your contigs (or bins), searches them
+against GMSC, and transfers these annotations. A single smORF can also be
+looked up on the GMSC website.
+:::
+
 # Step 13: Taxonomy of the bins (GTDB-Tk)
 
 ## Classify the bins (not run here)
@@ -1260,6 +1305,74 @@ it pplacer):
 not that the organism was never seen: it may be in a newer release, or in
 genomes that are not in GTDB. GTDB-Tk itself warns that its classification
 is not enough to name new taxa (that needs a de novo tree).
+:::
+
+# Public MAG databases
+
+## Public databases of MAGs {.lecture}
+
+Your MAGs are not alone: millions have already been built from public data.
+
+- [SPIRE](https://spire.embl.de/): 1.16 million MAGs from 99,146 metagenomes,
+  with their environment (habitat, location)
+- [GlobDB](https://globdb.org/): one genome per species (306,260), merged
+  from GTDB and 13 other genome catalogues
+- [GMGC](https://gmgc.embl.de/): a catalogue of genes (not genomes), 303
+  million unigenes from 13,174 metagenomes
+
+::: handout
+- [SPIRE](https://spire.embl.de/) (Searchable Planetary-scale mIcrobiome
+  REsource; [Schmidt et al., 2024](https://doi.org/10.1093/nar/gkad943)):
+  99,146 metagenomes from 739 studies, all processed in the same way, with
+  manually curated contextual data (habitat, location, ...). It contains 1.16
+  million medium- or high-quality MAGs, which, together with 907,000 genomes
+  of isolates, form 133,402 species-level clusters. The MAGs can be browsed
+  by environment or by taxonomy, and downloaded.
+- [GlobDB](https://globdb.org/)
+  ([Speth et al., 2025](https://doi.org/10.1093/bioadv/vbaf280)): the GTDB
+  species representatives, extended with 13 other genome catalogues and
+  dereplicated to one genome per species: 306,260 species in release 226,
+  over twice as many as GTDB. It also provides databases for profiling
+  metagenomes against these genomes (SingleM, sylph).
+- [GMGC](https://gmgc.embl.de/) (Global Microbial Gene Catalog;
+  [Coelho et al., 2022](https://doi.org/10.1038/s41586-021-04233-4)): 2.3
+  billion ORFs from 13,174 metagenomes, clustered into 303 million unigenes,
+  each with its habitats, taxonomy and functional annotation. A protein from
+  one of your bins can be searched against it.
+:::
+
+## Specialised MAG databases {.lecture}
+
+::: slides
+![](media/urban_soil_mags.png){width="95%"}
+:::
+
+[urban-soil-mags.big-data-biology.org](https://urban-soil-mags.big-data-biology.org/):
+7,949 MAGs (4,171 species) from 58 urban soil samples, including the one we
+used.
+
+::: handout
+Many studies publish their MAGs on a website of their own, focused on one
+habitat. The urban soil MAGs come from the study that produced our sample
+(see [The data](#the-data)), assembled from the full sample with long reads.
+The site can filter the genomes by quality and taxonomy, and download them
+(or the table that describes them).
+:::
+
+## What can you do with these databases?
+
+- Download their MAGs, instead of (or before) building your own
+- Compare your MAGs to theirs: are yours new species? (dereplication,
+  pangenomes)
+- Check where else your organisms (or genes) are found: habitats, geographic
+  distributions, ...
+
+::: handout
+Comparing genomes needs the average nucleotide identity (ANI) between them,
+the same measure GTDB-Tk uses in step 13: tools such as skani or dRep (see
+[Beyond this workshop](#beyond-this-workshop)) compute it between your bins
+and a set of downloaded genomes. Two genomes above 95% ANI are usually taken
+to be the same species.
 :::
 
 # Wrap-up
@@ -1687,6 +1800,20 @@ not ranked, and not all of them work with every kind of data.
   *Bioinformatics*.
   <https://doi.org/10.1093/bioinformatics/btu031>
 
+**Small proteins:**
+
+- [GMSC](https://gmsc.big-data-biology.org/) and
+  [GMSC-mapper](https://github.com/BigDataBiology/GMSC-mapper): a catalogue
+  of small proteins (smORFs) from the global microbiome, and the tool that
+  finds and annotates them in contigs or genomes. Duan Y, Santos-Júnior CD,
+  Schmidt TS, Fullam A, de Almeida BLS, Zhu C, Kuhn M, Zhao X-M, Bork P,
+  Coelho LP (2024). A catalog of small proteins from the global microbiome.
+  *Nature Communications*.
+  <https://doi.org/10.1038/s41467-024-51894-6>
+- Sberro H, et al. (2019). Large-scale analyses of human microbiomes reveal
+  thousands of small, novel genes. *Cell*.
+  <https://doi.org/10.1016/j.cell.2019.07.016>
+
 ### Taxonomy of the bins (step 13)
 
 **Used:**
@@ -1729,6 +1856,23 @@ not ranked, and not all of them work with every kind of data.
   phylogenetic analysis of microbial isolates and genomes from metagenomes
   using PhyloPhlAn 3.0. *Nature Communications*.
   <https://doi.org/10.1038/s41467-020-16366-7>
+
+### Public MAG databases
+
+- [SPIRE](https://spire.embl.de/): MAGs and metagenomes, with their
+  environmental context. Schmidt TSB, et al. (2024). SPIRE: a Searchable,
+  Planetary-scale mIcrobiome REsource. *Nucleic Acids Research*.
+  <https://doi.org/10.1093/nar/gkad943>
+- [GlobDB](https://globdb.org/): one genome per species, from GTDB and 13
+  other catalogues. Speth DR, et al. (2025). GlobDB: a comprehensive
+  species-dereplicated microbial genome resource. *Bioinformatics Advances*.
+  <https://doi.org/10.1093/bioadv/vbaf280>
+- [GMGC](https://gmgc.embl.de/): a catalogue of genes from metagenomes and
+  genomes. Coelho LP, et al. (2022). Towards the biogeography of prokaryotic
+  genes. *Nature*. <https://doi.org/10.1038/s41586-021-04233-4>
+- [Urban soil MAGs](https://urban-soil-mags.big-data-biology.org/): the MAGs
+  of the study our sample comes from (Duan et al., 2026, under
+  [Data](#data)).
 
 ### Beyond this workshop
 
