@@ -723,6 +723,107 @@ SemiBin2 does.
 
 # Step 8: Completeness and contamination (CheckM2)
 
+## How can a bin be wrong?
+
+::: slides
+:::: r-stack
+::::: {.fragment .fade-out data-fragment-index="1"}
+![](media/binning4_with_errors.svg){height="400"}
+:::::
+::::: {.fragment .fade-in-then-out data-fragment-index="1"}
+![](media/binning_contamination.svg){height="400"}
+:::::
+::::: {.fragment .fade-in data-fragment-index="2"}
+![](media/binning_incompleteness.svg){height="400"}
+:::::
+::::
+
+::::: {.fragment data-fragment-index="1"}
+**Contamination** (false positive): contigs that do not belong in the bin
+:::::
+::::: {.fragment data-fragment-index="2"}
+**Incompleteness** (false negative): contigs missing from the bin
+:::::
+:::
+
+::: handout
+![The bins of Step 7, with their errors circled: the yellow contig in the
+green bin (contamination), and the green contigs left out of it
+(incompleteness).](media/binning_errors){width="55%"}
+
+Binning makes two kinds of errors (see the figures in Step 7). A bin is
+*contaminated* when it has contigs that do not belong there (false
+positives), such as the yellow contig in the green bin. It is *incomplete*
+when contigs of its genome were left out (false negatives), such as the
+green contigs that stayed unbinned. Both are measured as percentages of a
+genome; but we do not know the genome, so how can we measure them?
+:::
+
+## Single-copy marker genes
+
+- Genes for the basic machinery of life: ribosomal proteins, tRNA
+  synthetases, RNA polymerase, ...
+- Found in (nearly) every bacterial and archaeal genome
+- ... and only **once** per genome (mostly)
+
+::: fragment
+Count them in a bin, and we can tell how much of a genome the bin has, and
+whether it has more than one.
+:::
+
+::: handout
+Many sets of such genes have been proposed, for example the 31 universal
+genes of [Ciccarelli et al., 2006](https://doi.org/10.1126/science.1123061).
+They are the genes used to build the tree of life, and SingleM (Step 3)
+profiles a sample from the reads that come from them.
+:::
+
+## CheckM1: counting marker genes
+
+::: slides
+:::: r-stack
+::::: {.fragment .fade-out data-fragment-index="1"}
+![](media/checkm1_markers.svg)
+:::::
+::::: {.fragment .fade-in-then-out data-fragment-index="1"}
+![](media/checkm1_complete.svg)
+:::::
+::::: {.fragment .fade-in-then-out data-fragment-index="2"}
+![](media/checkm1_incomplete.svg)
+:::::
+::::: {.fragment .fade-in data-fragment-index="3"}
+![](media/checkm1_contaminated.svg)
+:::::
+::::
+
+A good genome has **all** the marker genes, and **none** of them twice.
+:::
+
+::: handout
+![CheckM1 counts the copies of each single-copy marker gene in a bin. A
+missing marker means an incomplete bin; a marker found twice, a contaminated
+one.](media/checkm1){width="65%"}
+
+CheckM ([Parks et al., 2015](https://doi.org/10.1101/gr.186072.114)) looks
+for single-copy marker genes in each bin. A good genome has all of them, and
+none twice:
+
+- **completeness** is the fraction of the marker genes found in the bin,
+- **contamination** is the number of extra copies, as a fraction of the
+  number of marker genes. It can be more than 100%: a bin that mixes three
+  complete genomes has two extra copies of each marker, 200% contamination.
+
+CheckM1 picks the marker genes for each bin from its place in a reference
+tree (genes that are single-copy in its lineage), and counts genes that are
+found next to each other on genomes as a set, so that a single lost contig
+does not count many times.
+:::
+
+::: instructor
+Step through the figure: before showing the counts of each bin, ask the room
+for its completeness and contamination.
+:::
+
 ## Run CheckM2
 
 ```bash

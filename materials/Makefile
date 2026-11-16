@@ -12,3 +12,12 @@ SITE        ?= build/site
 SITE_DIR    ?= $(SITE)
 
 include common/workshop.mk
+
+# media/checkm1.py also draws the steps the deck goes through, one figure per
+# step, picked by the output name (the handout figure, checkm1, is built by
+# the usual figure-script rules).
+CHECKM1_STEPS := $(foreach s,markers complete incomplete contaminated,$(BUILD)/media/checkm1_$(s).svg)
+$(CHECKM1_STEPS): $(BUILD)/media/%.svg: media/checkm1.py
+	@mkdir -p $(dir $@)
+	$(PYTHON) $< $@
+$(BUILD)/$(STEM)__slides.html: $(CHECKM1_STEPS)
