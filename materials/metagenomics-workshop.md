@@ -699,7 +699,7 @@ singlem appraise \
     > 10_APPRAISE/appraise_lr.txt
 ```
 
-## Look at the appraisal
+## Look at the appraisal {.handson}
 
 - `10_APPRAISE/appraise_sr.txt`: `percent_binned` is the fraction of the
   marker-gene coverage in the reads that is in the bins

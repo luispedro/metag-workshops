@@ -35,6 +35,10 @@ documents it in full (its `CLAUDE.md`). In short:
 - ```` ```bash ```` blocks are shown as *type this in the shell*, with a copy
   button; output blocks opt out with ```` ```{.no-cue} ````.
 - `::: remember`, `::: aside`, `::: reference` boxes.
+- In the deck, each slide is badged *hands-on* (it has a command to type) or
+  *lecture* (it does not; also faintly tinted). The guess is overridden with
+  `## Title {.handson}` or `{.lecture}` on the heading, and dropped with
+  `{.no-tag}`.
 - Diagrams as ```` ```dot ```` blocks (Graphviz), not ASCII.
 
 The commands in the notes are those that `metag-ws show-cmd` prints (8
