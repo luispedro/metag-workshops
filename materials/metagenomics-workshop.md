@@ -1175,8 +1175,7 @@ a function across bins.
 
 ::: reference
 The command, **not to run**: GTDB-Tk needs about 130 GB of memory and takes
-about 40 minutes (with 16 threads), more than the workshop machine can give
-each of us.
+about 40 minutes (with 16 threads).
 
 ```{.bash .no-cue}
 mkdir -p 13_GTDBTK
@@ -1195,9 +1194,10 @@ metag-ws results-for 13
 
 ::: handout
 GTDB-Tk is the standard way to give a bin its place in the GTDB taxonomy (the
-one SingleM uses in steps 3 and 10), and the classification you would report
-for a MAG. It finds 120 bacterial (or 53 archaeal) single-copy marker genes in
-each bin, then:
+one SingleM uses in steps 3 and 10)
+
+It finds 120 bacterial (or 53 archaeal) single-copy marker genes in each bin,
+then:
 
 1. compares the bin with the GTDB species representatives (average
    nucleotide identity, ANI, with skani): a bin within the ANI radius of a
@@ -1205,9 +1205,6 @@ each bin, then:
 2. otherwise, places the bin in the GTDB tree using the aligned marker genes
    (pplacer), and takes the taxonomy of where it lands, using relative
    evolutionary divergence (RED) to decide the rank (genus, family, …).
-
-The memory goes to step 2: the tree of all bacterial species representatives
-is large. On the full sample, with thousands of bins, it would take hours.
 
 `results-for 13` brings in all our results (steps 1 to 13), so that you can
 compare the classification with our CheckM2 and SingleM results for the same
