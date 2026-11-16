@@ -824,6 +824,53 @@ Step through the figure: before showing the counts of each bin, ask the room
 for its completeness and contamination.
 :::
 
+## CheckM2: genes come in groups
+
+::: slides
+:::: r-stack
+::::: {.fragment .fade-out data-fragment-index="1"}
+![](media/checkm2_complete.svg)
+:::::
+::::: {.fragment .fade-in-then-out data-fragment-index="1"}
+![](media/checkm2_incomplete.svg)
+:::::
+::::: {.fragment .fade-in data-fragment-index="2"}
+![](media/checkm2_contaminated.svg)
+:::::
+::::
+
+Genes form groups (pathways, complexes): seeing B1 and B3, expect B2.
+CheckM2 *learns* these from reference genomes (machine learning).
+:::
+
+::: handout
+![CheckM2's intuition: it can learn the single-copy marker genes (the
+unlabelled boxes, as in CheckM1), but also that genes come in groups. A group
+missing entirely is a pathway the organism does not have; a group missing one
+of its genes means an incomplete bin; a group found twice, a contaminated
+one.](media/checkm2){width="65%"}
+
+CheckM2 ([Chklovski et al., 2023](https://doi.org/10.1038/s41592-023-01940-w))
+looks at all the genes of a bin, not only at universal marker genes.
+
+The system is machine learning based, so it is hard to know what it truly does,
+but a simple intuition is that, beyond single-copy markers, genes form groups
+(the enzymes of a pathway, the subunits of a complex), so seeing some genes of
+a group means the others should be there too: a bin with B1 and B3 but no B2 is
+probably missing a contig. A bin with no gene of a group at all is not, though:
+that organism just does not have that pathway.
+
+Its models were trained on reference genomes from which contigs were removed
+(incompleteness) or to which contigs of other genomes were added
+(contamination), so that the true answer was known.
+
+:::
+
+::: instructor
+A note that the system is not perfect: CheckM2 always reports low completeness
+for *Allobaculum*, and likely others.
+:::
+
 ## Run CheckM2
 
 ```bash

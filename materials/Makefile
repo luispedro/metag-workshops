@@ -13,11 +13,17 @@ SITE_DIR    ?= $(SITE)
 
 include common/workshop.mk
 
-# media/checkm1.py also draws the steps the deck goes through, one figure per
-# step, picked by the output name (the handout figure, checkm1, is built by
-# the usual figure-script rules).
+# media/checkm1.py and checkm2.py also draw the steps the deck goes through,
+# one figure per step, picked by the output name (their handout figures,
+# checkm1 and checkm2, are built by the usual figure-script rules).
 CHECKM1_STEPS := $(foreach s,markers complete incomplete contaminated,$(BUILD)/media/checkm1_$(s).svg)
+CHECKM2_STEPS := $(foreach s,complete incomplete contaminated,$(BUILD)/media/checkm2_$(s).svg)
 $(CHECKM1_STEPS): $(BUILD)/media/%.svg: media/checkm1.py
 	@mkdir -p $(dir $@)
 	$(PYTHON) $< $@
-$(BUILD)/$(STEM)__slides.html: $(CHECKM1_STEPS)
+$(CHECKM2_STEPS): $(BUILD)/media/%.svg: media/checkm2.py
+	@mkdir -p $(dir $@)
+	$(PYTHON) $< $@
+$(BUILD)/$(STEM)__slides.html: $(CHECKM1_STEPS) $(CHECKM2_STEPS)
+# checkm2.py takes its style from checkm1.py.
+$(CHECKM2_STEPS) $(foreach f,svg pdf png,$(BUILD)/media/checkm2.$(f)): media/checkm1.py

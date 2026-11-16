@@ -108,10 +108,11 @@ def panel(case, title=None):
     return out
 
 
-def svg(width, height, body, name):
+def svg(width, height, body, name,
+        about='CheckM1 cartoon, redrawn from the MAG QC deck (slide 7)'):
     return '\n'.join([
         '<?xml version="1.0" encoding="UTF-8" standalone="no"?>',
-        f'<!-- {name}: CheckM1 cartoon, redrawn from the MAG QC deck (slide 7). -->',
+        f'<!-- {name}: {about}. -->',
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}" id="svg-{name}">',
         *('  ' + line for line in body),
