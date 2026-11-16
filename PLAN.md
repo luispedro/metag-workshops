@@ -77,6 +77,7 @@ commands of every step and how to use `metag-ws`. Not done yet:
    | 10 | SingleM appraise | `appraise` |
    | 11 | Gene prediction (pyrodigal) | `genes` |
    | 12 | eggNOG-mapper | `eggnog` |
+   | 13 | GTDB-Tk (results only) | — |
 
    A step can be given as `5` (all its substeps) or `5.2`.
 2. **Invocation.** `metag-ws <subcommand> [STEP]`: with a step (`metag-ws
@@ -93,6 +94,7 @@ commands of every step and how to use `metag-ws`. Not done yet:
    ```
    01_DATA  02_QC  03_SINGLEM  04_ASSEMBLY  05_POLISH  06_MAPPING
    07_BINNING  08_CHECKM2  09_GUNC  10_APPRAISE  11_GENES  12_EGGNOG
+   13_GTDBTK
    ```
 
    Substeps share their step's folder (`02_QC` has the short- and long-read
@@ -140,6 +142,15 @@ commands of every step and how to use `metag-ws`. Not done yet:
    the AWS machine, check that it works for participants with the shared,
    read-only installation (otherwise add `--as-is`, which never installs).
    Step 11 does not write `all_bins.faa` (nothing uses it; one loop line less).
+   **Results-only steps** (`results_only` in `steps.toml`): step 13, GTDB-Tk,
+   needs ≈130 GB of RAM (pplacer, bacterial tree; 40 min, 16 threads), more than the workshop
+   machine has, but it is the standard bin taxonomy and must be mentioned.
+   `show-cmd`/`explain-cmd` show its command with a warning not to run it,
+   its "what to look at" points to `13_GTDBTK_precomputed`, and `results-for
+   13` links all precomputed folders (for comparison) without changing
+   `precomputed_upto`, so the other steps keep their inputs. It is the last
+   step so that nothing reads its outputs. `_run-all` runs it (for the
+   precomputed results); `--until 12` skips it.
 8. **"Get data" (step 1)**: for now, copy the reads from the shared data
    directory into `01_DATA/` (`cp $METAG_WS_DATA/*.fq.gz 01_DATA/`).
    The workshop dataset is 1.2 GB (`sample_R1.fq.gz` 91 MB,
@@ -233,9 +244,10 @@ work in their home directory.
    `pixi.toml` configurable instead of the aqua paths, and add a setup script
    that downloads them (`singlem data`, `checkm2 database --download`,
    `gunc download_db`, `download_eggnog_data.py`); this is machine setup, not
-   part of the workshop.
-3. **Software**: one shared `pixi install --frozen --all` (the `eggnog`
-   environment too), and `metag-ws` and the tools on every user's `PATH`
+   part of the workshop. The GTDB-Tk data (step 13) are not needed there:
+   participants only look at the precomputed results.
+3. **Software**: one shared `pixi install --frozen --all` (the `eggnog` and
+   `gtdbtk` environments too), and `metag-ws` and the tools on every user's `PATH`
    (e.g., activation in `/etc/profile.d/`).
 4. **Users**: one account per participant (created from a list); home
    directories need ≈ 5 GB each for a full own run (nothing extra for

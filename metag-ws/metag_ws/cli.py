@@ -5,7 +5,9 @@
     metag-ws results-for [STEP]    bring in the precomputed results up to STEP
 
 Without STEP, a menu of the steps is shown. The steps, their commands and the
-explanations are in steps.toml (next to this file).
+explanations are in steps.toml (next to this file). Results-only steps (too
+large for the workshop machine) show their commands, but participants look at
+the precomputed results instead.
 
 Hidden, for testing and for building the precomputed results:
 
@@ -40,7 +42,7 @@ STEPS_FILE = Path(__file__).with_name('steps.toml')
 PRECOMPUTED_SUFFIX = '_precomputed'
 PLACEHOLDER = re.compile(r'\{(\d+(?:\.\d+)?|threads|threads_fastp|data)\}')
 # databases that the commands use through environment variables (set by pixi)
-DB_VARS = ['SINGLEM_METAPACKAGE_PATH', 'CHECKM2DB', 'GUNC_DB', 'EGGNOG_DATA_DIR']
+DB_VARS = ['SINGLEM_METAPACKAGE_PATH', 'CHECKM2DB', 'GUNC_DB', 'EGGNOG_DATA_DIR', 'GTDBTK_DATA_PATH']
 
 out = Console(highlight=False)
 err = Console(stderr=True, highlight=False, soft_wrap=True)
@@ -66,6 +68,7 @@ class Step:
     cmds: list
     outputs: list
     look_at: str
+    results_only: str   # why the step is not run in the workshop ('' if it is)
 
     @property
     def is_leaf(self):
@@ -98,7 +101,8 @@ class Steps:
             st = Step(id=sid, title=d['title'],
                       folder=parent.folder if parent else d['folder'],
                       parent=parent, children=[], cmds=d.get('cmd', []),
-                      outputs=d.get('outputs', []), look_at=d.get('look_at', '').strip())
+                      outputs=d.get('outputs', []), look_at=d.get('look_at', '').strip(),
+                      results_only=d.get('results_only', parent.results_only if parent else '').strip())
             if parent:
                 parent.children.append(st)
             self.by_id[sid] = st
@@ -196,7 +200,9 @@ class Renderer:
         self.steps = steps
         self.ctx = ctx
 
-    def render(self, text, current):
+    def render(self, text, current, precomputed=False):
+        """Fill in the placeholders of `text`, for step `current`. With
+        `precomputed`, every step's folder is its precomputed one."""
         def sub(m):
             key = m.group(1)
             if key == 'threads':
@@ -205,8 +211,13 @@ class Renderer:
                 return str(min(self.ctx.threads, 16))
             if key == 'data':
                 return self.ctx.data
-            return folder_of(self.steps.by_id[key], current, self.ctx)
+            ref = self.steps.by_id[key]
+            return ref.folder + PRECOMPUTED_SUFFIX if precomputed else folder_of(ref, current, self.ctx)
         return PLACEHOLDER.sub(sub, text)
+
+    def look_at(self, st):
+        """What to look at after `st`: in our results for a results-only step."""
+        return self.render(st.look_at, st, precomputed=bool(st.results_only))
 
     def commands(self, st):
         return [self.render(c['run'], st).strip('\n') for c in st.cmds]
@@ -251,7 +262,8 @@ def choose_step(steps, state, ctx, action):
         sub = st.parent is not None
         label = f'{st.id:>{6 if sub else 4}}  {escape(st.title)}'
         tags = []
-        if st.is_leaf and ctx.upto and step_key(st.id) <= step_key(ctx.upto):
+        if st.is_leaf and (ctx.upto and step_key(st.id) <= step_key(ctx.upto)
+                           or st.results_only and (ctx.workdir / (st.folder + PRECOMPUTED_SUFFIX)).exists()):
             tags.append('[cyan]precomputed[/]')
         if st.is_leaf and done_outputs(st, ctx.workdir):
             tags.append('[green]done[/]')
@@ -336,12 +348,15 @@ def cmd_show(steps, args):
     for i, leaf in enumerate(st.leaves()):
         if i:
             print()
-        warn_missing(r, leaf)
+        if leaf.results_only:
+            err.print(f'[yellow][bold]Results only: do not run this step.[/bold]\n{escape(leaf.results_only)}[/]')
+        else:
+            warn_missing(r, leaf)
         print('\n'.join(r.header(leaf)))
         print('\n'.join(r.commands(leaf)))
         sys.stdout.flush()
         if leaf.look_at:
-            err.print(f'[dim]What to look at:\n{escape(r.render(leaf.look_at, leaf))}[/]')
+            err.print(f'[dim]What to look at:\n{escape(r.look_at(leaf))}[/]')
 
 
 def cmd_explain(steps, args):
@@ -354,7 +369,11 @@ def cmd_explain(steps, args):
     warn_cwd(ctx)
     for leaf in st.leaves():
         out.rule(f'[bold]Step {leaf.id}: {escape(leaf.full_title())}')
-        warn_missing(r, leaf)
+        if leaf.results_only:
+            out.print(f'[yellow][bold]Results only: do not run this step.[/bold]\n{escape(leaf.results_only)}[/]',
+                      soft_wrap=True)
+        else:
+            warn_missing(r, leaf)
         for line in r.header(leaf)[1:]:
             out.print(f'[dim]{escape(line)}[/]', soft_wrap=True)
         for c in leaf.cmds:
@@ -369,7 +388,7 @@ def cmd_explain(steps, args):
             out.print()
         if leaf.look_at:
             out.print('[bold]What to look at[/]')
-            out.print(escape(r.render(leaf.look_at, leaf)), soft_wrap=True)
+            out.print(escape(r.look_at(leaf)), soft_wrap=True)
             out.print()
 
 
@@ -395,6 +414,15 @@ def cmd_results_for(steps, args):
             os.symlink(ctx.precomputed / t.folder, link)
             out.print(f'  {link.name}')
     upto = st.leaves()[-1].id
+    if st.results_only:
+        # Only there to look at: the other steps keep using the same inputs
+        # (and the earlier results are there to compare with).
+        out.print(f'\nPrecomputed results of steps 1 to {upto} are in [bold]{escape(pretty(ctx.workdir))}[/], '
+                  f'in the *{PRECOMPUTED_SUFFIX} folders (your own folders are not changed). '
+                  f'The commands of the other steps still use the same inputs as before.')
+        out.print('[yellow]Note: these results may not be exactly the same as your own: for example, '
+                  'bin names and numbers can differ between runs.[/]')
+        return
     state['precomputed_upto'] = upto
     save_state(state)
     nxt = steps.next_after(steps.by_id[upto]) if upto != steps.leaves[-1].id else None

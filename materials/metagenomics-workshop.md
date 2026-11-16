@@ -48,10 +48,12 @@ digraph pipeline {
   appr   [label="10. SingleM\nappraise"];
   genes  [label="11. Genes\npyrodigal"];
   egg    [label="12. Annotation\neggNOG-mapper"];
+  gtdb   [label="13. Taxonomy\nGTDB-Tk", style="rounded,dashed,filled"];
   data -> qc -> singlem;
   qc -> asm -> polish -> map -> bin;
   bin -> checkm; bin -> gunc; bin -> appr; singlem -> appr;
   bin -> genes -> egg;
+  bin -> gtdb [style=dashed];
 }
 ```
 
@@ -59,6 +61,9 @@ digraph pipeline {
 The assembly is based on the long reads (Oxford Nanopore), and the short reads
 (Illumina) are used to correct (polish) the assembly and to estimate the
 coverage of each contig for binning.
+
+Step 13 (dashed) is too large for the workshop machine: we look at its
+results, but do not run it.
 
 Each step names the tools it uses, with links to their papers. [Tools and
 references](#tools-and-references), at the end, lists them all, together with
@@ -74,6 +79,8 @@ At the end of the workshop, you should be able to
 - go from reads to bins (draft genomes): assembly, polishing, binning
 - say which bins are high quality, medium quality or unusable, and why
 - find a function of interest in an annotated genome
+- read the taxonomic classification of a bin, and tell when it may be a new
+  species
 
 ::: instructor
 TODO: a slide or two of background on metagenomics, short vs. long reads,
@@ -156,6 +163,7 @@ Each step has its own numbered folder:
 01_DATA     02_QC        03_SINGLEM   04_ASSEMBLY
 05_POLISH   06_MAPPING   07_BINNING   08_CHECKM2
 09_GUNC     10_APPRAISE  11_GENES     12_EGGNOG
+13_GTDBTK
 ```
 
 ::: handout
@@ -234,14 +242,15 @@ no longer match: take them from `metag-ws show-cmd` instead.
 - Long commands are split over several lines with `\`: paste the whole block
   at once
 - Databases are given by environment variables, already set for you:
-  `$CHECKM2DB`, `$GUNC_DB`, `$EGGNOG_DATA_DIR` (SingleM finds its own)
+  `$CHECKM2DB`, `$GUNC_DB`, `$EGGNOG_DATA_DIR`, `$GTDBTK_DATA_PATH`
+  (SingleM finds its own)
 
 ::: handout
 The slowest steps take several minutes each: SingleM on the long reads (3.2),
 assembly (4), GUNC (9) and eggNOG-mapper (12). While they run, read the
 explanations (`metag-ws explain-cmd`) or look at the results of the previous
 step in a second terminal. Altogether, the commands take about half an hour of
-computer time.
+computer time (without step 13, which we do not run).
 :::
 
 ## Looking at HTML reports
@@ -1160,15 +1169,111 @@ TODO: background on orthology-based annotation, and an exercise looking for
 a function across bins.
 :::
 
+# Step 13: Taxonomy of the bins (GTDB-Tk)
+
+## Classify the bins (not run here)
+
+::: reference
+The command, **not to run**: GTDB-Tk needs about 130 GB of memory and takes
+about 40 minutes (with 16 threads), more than the workshop machine can give
+each of us.
+
+```{.bash .no-cue}
+mkdir -p 13_GTDBTK
+pixi run -e gtdbtk gtdbtk classify_wf \
+    --genome_dir 07_BINNING/output_bins -x fa \
+    --out_dir 13_GTDBTK \
+    --cpus 8
+```
+:::
+
+Instead, bring in our results:
+
+```bash
+metag-ws results-for 13
+```
+
+::: handout
+GTDB-Tk is the standard way to give a bin its place in the GTDB taxonomy (the
+one SingleM uses in steps 3 and 10), and the classification you would report
+for a MAG. It finds 120 bacterial (or 53 archaeal) single-copy marker genes in
+each bin, then:
+
+1. compares the bin with the GTDB species representatives (average
+   nucleotide identity, ANI, with skani): a bin within the ANI radius of a
+   species (usually 95%) is assigned to it;
+2. otherwise, places the bin in the GTDB tree using the aligned marker genes
+   (pplacer), and takes the taxonomy of where it lands, using relative
+   evolutionary divergence (RED) to decide the rank (genus, family, …).
+
+The memory goes to step 2: the tree of all bacterial species representatives
+is large. On the full sample, with thousands of bins, it would take hours.
+
+`results-for 13` brings in all our results (steps 1 to 13), so that you can
+compare the classification with our CheckM2 and SingleM results for the same
+bins. Unlike for the other steps, it does not change which inputs the
+commands of `metag-ws show-cmd` use.
+
+GTDB-Tk is in its own environment (`gtdbtk`), like eggNOG-mapper in step 12.
+
+Tool: [GTDB-Tk](https://github.com/Ecogenomics/GTDBTk)
+([Chaumeil et al., 2022](https://doi.org/10.1093/bioinformatics/btac672)),
+with [GTDB](https://gtdb.ecogenomic.org) release 232,
+[skani](https://github.com/bluenote-1577/skani)
+([Shaw and Yu, 2023](https://doi.org/10.1038/s41592-023-02018-3)) and
+[pplacer](https://github.com/matsen/pplacer)
+([Matsen et al., 2010](https://doi.org/10.1186/1471-2105-11-538)).
+:::
+
+## Look at the classification
+
+```bash
+cut -f1,2,6,14 13_GTDBTK_precomputed/gtdbtk.bac120.summary.tsv | column -t -s$'\t'
+```
+
+- `classification`: domain to species (`d__…;p__…;…;s__…`)
+- `closest_genome_ani`: ANI to the closest species representative
+- `classification_method`: by ANI, or by placement in the tree
+
+Archaea, if any, are in `gtdbtk.ar53.summary.tsv`.
+
+- Which bins have a species (`s__` followed by a name)? Those without one may
+  be new species
+- Bins with too few marker genes are `Unclassified`: how complete are they
+  (`08_CHECKM2_precomputed/quality_report.tsv`)?
+- Does SingleM agree (`10_APPRAISE_precomputed/bins.profile.tsv`)?
+
+::: instructor
+Our results (precomputed run, 31 bins; 40 min, 128 GB peak, almost all of
+it pplacer):
+
+- The five high-quality bins: SemiBin_0, SemiBin_1 and SemiBin_3 are known
+  GTDB species (ANI 99.5%, 99.9% and 98.5%, by the ANI screen). SemiBin_2
+  (the bin annotated in step 12; *Cyclobacteriaceae*, genus ZC4RG29) and
+  SemiBin_4 (*Steroidobacteraceae*, genus RPQJ01) have no species: placed in
+  the tree, not within 95% ANI of any species representative, so possibly
+  new species. SingleM agrees on SemiBin_2 down to the genus.
+- Several partial *Nitrospira_C* bins (SemiBin_7, 10, 26, 27, 28) without a
+  species, and SemiBin_22 (25% complete) only to the family (`g__` empty,
+  decided by RED).
+- 18 small bins (mostly <15% complete, <1 Mbp) are `Unclassified Bacteria`:
+  too few marker genes to place them.
+
+"No species" in GTDB means no species representative within its ANI radius,
+not that the organism was never seen: it may be in a newer release, or in
+genomes that are not in GTDB. GTDB-Tk itself warns that its classification
+is not enough to name new taxa (that needs a de novo tree).
+:::
+
 # Wrap-up
 
 ## What we did
 
 From short and long reads of one soil sample to quality-checked, annotated
-draft genomes:
+and classified draft genomes:
 
 QC → profiling → assembly → polishing → mapping → binning → quality checks →
-gene prediction → annotation
+gene prediction → annotation → taxonomy
 
 ::: instructor
 TODO: what changes on real (full-size) data: runtimes and resources, and
@@ -1585,15 +1690,53 @@ not ranked, and not all of them work with every kind of data.
   *Bioinformatics*.
   <https://doi.org/10.1093/bioinformatics/btu031>
 
+### Taxonomy of the bins (step 13)
+
+**Used:**
+
+- [GTDB-Tk](https://github.com/Ecogenomics/GTDBTk): the standard
+  classification of bacterial and archaeal genomes in GTDB (see
+  [Taxonomic profiling](#taxonomic-profiling-steps-3-and-10) for GTDB
+  itself).
+  - Chaumeil P-A, Mussig AJ, Hugenholtz P, Parks DH (2022). GTDB-Tk v2:
+    memory friendly classification with the genome taxonomy database.
+    *Bioinformatics*.
+    <https://doi.org/10.1093/bioinformatics/btac672>
+  - Chaumeil P-A, Mussig AJ, Hugenholtz P, Parks DH (2020). GTDB-Tk: a
+    toolkit to classify genomes with the Genome Taxonomy Database.
+    *Bioinformatics*.
+    <https://doi.org/10.1093/bioinformatics/btz848>
+- [pplacer](https://github.com/matsen/pplacer): places the marker gene
+  alignment of a bin in the reference tree. Matsen FA, Kodner RB, Armbrust EV
+  (2010). pplacer: linear time maximum-likelihood and Bayesian phylogenetic
+  placement of sequences onto a fixed reference tree. *BMC Bioinformatics*.
+  <https://doi.org/10.1186/1471-2105-11-538>
+- [skani](https://github.com/bluenote-1577/skani): the ANI comparison with
+  the species representatives. Shaw J, Yu YW (2023). Fast and robust
+  metagenomic sequence comparison through sparse chaining with skani.
+  *Nature Methods*. <https://doi.org/10.1038/s41592-023-02018-3>
+
+**Alternatives:**
+
+- SingleM, as in step 10 (`singlem pipe --genome-fasta-files`): a fast
+  classification of the bins from their marker genes, also in GTDB (paper
+  above).
+- [CAT/BAT](https://github.com/MGXlab/CAT_pack): classifies contigs (CAT)
+  and bins (BAT) from the taxonomy of their proteins' hits, in NCBI or GTDB.
+  von Meijenfeldt FAB, Arkhipova K, Cambuy DD, Coutinho FH, Dutilh BE (2019).
+  Robust taxonomic classification of uncharted microbial sequences and bins
+  with CAT and BAT. *Genome Biology*.
+  <https://doi.org/10.1186/s13059-019-1817-x>
+- [PhyloPhlAn](https://github.com/biobakery/phylophlan): places genomes in a
+  phylogeny of its own reference genomes. Asnicar F, et al. (2020). Precise
+  phylogenetic analysis of microbial isolates and genomes from metagenomes
+  using PhyloPhlAn 3.0. *Nature Communications*.
+  <https://doi.org/10.1038/s41467-020-16366-7>
+
 ### Beyond this workshop
 
 Steps that a full analysis usually adds:
 
-- [GTDB-Tk](https://github.com/Ecogenomics/GTDBTk): the taxonomy of each
-  bin, in GTDB. Chaumeil P-A, Mussig AJ, Hugenholtz P, Parks DH (2022).
-  GTDB-Tk v2: memory friendly classification with the genome taxonomy
-  database. *Bioinformatics*.
-  <https://doi.org/10.1093/bioinformatics/btac672>
 - Dereplication, to keep one genome per species across samples:
   - [dRep](https://github.com/MrOlm/drep). Olm MR, Brown CT, Brooks B,
     Banfield JF (2017). dRep: a tool for fast and accurate genomic
@@ -1601,11 +1744,8 @@ Steps that a full analysis usually adds:
     through de-replication. *The ISME Journal*.
     <https://doi.org/10.1038/ismej.2017.126>
   - [galah](https://github.com/wwood/galah). No paper.
-  - [skani](https://github.com/bluenote-1577/skani): fast average
-    nucleotide identity (ANI) between genomes, as used by dereplication.
-    Shaw J, Yu YW (2023). Fast and robust metagenomic sequence comparison
-    through sparse chaining with skani. *Nature Methods*.
-    <https://doi.org/10.1038/s41592-023-02018-3>
+  - skani (step 13, above) also computes the average nucleotide identity
+    (ANI) between bins that dereplication needs.
 - Pipelines that run the whole analysis, from reads to annotated bins:
   - [nf-core/mag](https://nf-co.re/mag). Krakau S, Straub D, Gourlé H,
     Gabernet G, Nahnsen S (2022). nf-core/mag: a best-practice pipeline for

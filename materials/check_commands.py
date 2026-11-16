@@ -2,7 +2,8 @@
 
 Every command that `metag-ws show-cmd` prints for a participant who has run all
 the steps themselves (no `results-for`), with 8 threads, must appear verbatim
-as a ```bash block in metagenomics-workshop.md. Run in the default pixi
+as a ```bash block in metagenomics-workshop.md (or a ```{.bash .no-cue} one, for
+a command shown but not run: step 13). Run in the default pixi
 environment (it imports metag_ws):
 
     pixi run check-commands
@@ -18,7 +19,7 @@ THREADS = 8   # what the notes say (Conventions slide)
 
 
 def main():
-    blocks = {b.strip('\n') for b in re.findall(r'^```bash\n(.*?)^```', NOTES.read_text(), re.S | re.M)}
+    blocks = {b.strip('\n') for b in re.findall(r'^```(?:bash|\{\.bash[^}\n]*\})\n(.*?)^```', NOTES.read_text(), re.S | re.M)}
     ctx = Context(workdir=Path('/nonexistent'), data='/opt/metag-ws/data',
                   precomputed=Path('/nonexistent'), threads=THREADS, upto=None)
     r = Renderer(Steps(), ctx)

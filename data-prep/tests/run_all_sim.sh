@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # End-to-end test of `metag-ws _run-all` (the commands participants see) on
 # the simulated community (tests/sim/, from tests/smoke_test.sh). In the queue:
-#   cd data-prep && mqsub --no-email -t 16 -m 64 --hours 2 -- bash tests/run_all_sim.sh
+#   mqsub --no-email -t 16 -m 64 --hours 2 -- bash data-prep/tests/run_all_sim.sh --until 12
+# (from the repository root, see scripts/run_precomputed.sh)
+# (step 13, GTDB-Tk, needs ~130 GB of RAM: for it, use -m 192 and no --until).
 # The run goes to tests/ws_run/ (resumable: finished steps are skipped).
 set -euo pipefail
 cd "$(dirname "$0")/.."

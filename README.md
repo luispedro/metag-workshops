@@ -37,11 +37,11 @@ comfortable with the shell.
 ## Running it yourself
 
 ```bash
-pixi install --all             # the tools (eggNOG-mapper is in its own environment)
+pixi install --all             # the tools (eggNOG-mapper and GTDB-Tk are in their own environments)
 pixi run metag-ws --help
 ```
 
-The databases (SingleM metapackage, CheckM2, GUNC, eggNOG-mapper) are not part
+The databases (SingleM metapackage, CheckM2, GUNC, eggNOG-mapper, GTDB-Tk) are not part
 of the installation; their paths are set in `pixi.toml` (`[activation.env]`).
 
 ## Building the notes

@@ -15,6 +15,11 @@
 #   {data}           shared directory with the workshop reads (METAG_WS_DATA)
 # Shell variables are written as $NAME, not ${NAME}.
 #
+# `results_only`: a step that is too slow or too large for the workshop
+# machine. Its commands are shown, but participants look at the precomputed
+# results instead; the text says why. In its `look_at`, the placeholders are
+# the precomputed folders (e.g., {13} is 13_GTDBTK_precomputed).
+#
 # `outputs`: files (relative to the step's folder; globs allowed) that a
 # finished step leaves behind; used to check that inputs exist.
 #
@@ -496,4 +501,45 @@ explain = [
     ["--temp_dir", "where to put temporary files (by default, the current folder)"],
     ["--cpu", "number of threads"],
     ["--override", "overwrite existing outputs (e.g., when you run the command again)"],
+]
+
+
+[[step]]
+id = "13"
+folder = "13_GTDBTK"
+title = "Taxonomy of the bins (GTDB-Tk; results only)"
+results_only = """
+GTDB-Tk needs about 130 GB of memory (to place the bins in the GTDB tree of
+bacteria) and takes about 40 minutes with 16 threads: more than the workshop
+machine can give each of us, so we do not run it here. Look at the command
+(metag-ws explain-cmd 13) and at our results: metag-ws results-for 13 brings
+them in as 13_GTDBTK_precomputed (it does not change which inputs the commands
+of the other steps use)."""
+outputs = ["gtdbtk.*.summary.tsv"]
+look_at = """
+{13}/gtdbtk.bac120.summary.tsv (archaea, if any, are in
+gtdbtk.ar53.summary.tsv): one line per bin, with its classification (domain
+to species), the closest reference genome and its ANI, and how the
+classification was made (classification_method):
+cut -f1,2,6,14 {13}/gtdbtk.bac120.summary.tsv | column -t -s$'\\t'
+Which bins have a species (s__ followed by a name)? Those without one may be
+new species. Bins with too few marker genes are "Unclassified": how
+complete are they ({8}/quality_report.tsv)?
+Compare with what SingleM said about the same bins in step 10
+({10}/bins.profile.tsv)."""
+
+[[step.cmd]]
+run = """
+mkdir -p {13}
+pixi run -e gtdbtk gtdbtk classify_wf \\
+    --genome_dir {7}/output_bins -x fa \\
+    --out_dir {13} \\
+    --cpus {threads}"""
+explain = [
+    ["pixi run -e gtdbtk", "GTDB-Tk is in its own pixi environment, gtdbtk, as it needs older versions of some packages than the other tools (as for eggNOG-mapper in step 12)"],
+    ["gtdbtk classify_wf", "classifies each bin in the GTDB taxonomy. It finds 120 bacterial (or 53 archaeal) marker genes in the bin and first compares the bin (ANI, with skani) with the GTDB species representatives: a bin within a species' ANI radius (usually 95%) gets that species. The others are placed in the GTDB tree with the aligned marker genes (pplacer), and get the taxonomy of where they land, using relative evolutionary divergence (RED) to decide the rank. The reference data (GTDB release 232) are found through $GTDBTK_DATA_PATH, set for you"],
+    ["--genome_dir", "input: the folder with the bins"],
+    ["-x fa", "the file extension of the bins"],
+    ["--out_dir", "output folder; the classifications are in gtdbtk.bac120.summary.tsv (bacteria) and gtdbtk.ar53.summary.tsv (archaea)"],
+    ["--cpus", "number of threads"],
 ]
