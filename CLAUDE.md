@@ -21,9 +21,10 @@ status when finishing work it lists).
 ## Commands
 
 All software comes from pixi (`pixi install --all`). Environments: default
-(bioinformatics tools + `metag-ws`, editable), `eggnog` and `gtdbtk` (each
-separate because of dependency conflicts; used as `pixi run -e eggnog
-emapper.py ...`), and `docs` (pandoc, tectonic, graphviz, matplotlib).
+(bioinformatics tools + `metag-ws`, editable), `eggnog`, `gtdbtk` and
+`metabat2` (each separate because of dependency conflicts; used as `pixi run
+-e eggnog emapper.py ...`), and `docs` (pandoc, tectonic, graphviz,
+matplotlib).
 
 ```bash
 pixi run -e docs materials           # deck + handouts into materials/build/
@@ -63,7 +64,7 @@ renders every command with 8 threads and no precomputed inputs (via
 
 Invariants the design relies on (reasons in PLAN.md, "`metag-ws`: design decisions"):
 - Each step writes only into its own zero-padded folder (`01_DATA` …
-  `13_GTDBTK`) and reads only from earlier ones; this is what makes
+  `15_DEREP`) and reads only from earlier ones; this is what makes
   `results-for` safe (it only creates `NN_STEP_precomputed` symlinks to the
   shared read-only copy, for all steps ≤ N, and records `precomputed_upto` in
   `$XDG_STATE_HOME/metag-ws/state.json`).

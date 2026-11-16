@@ -543,3 +543,124 @@ explain = [
     ["--out_dir", "output folder; the classifications are in gtdbtk.bac120.summary.tsv (bacteria) and gtdbtk.ar53.summary.tsv (archaea)"],
     ["--cpus", "number of threads"],
 ]
+
+
+[[step]]
+id = "14"
+folder = "14_METABAT2"
+title = "A second binner (MetaBAT2)"
+
+[[step]]
+id = "14.1"
+title = "Bin the contigs"
+outputs = ["bins/*.fa", "depth.txt"]
+look_at = """
+The bins are in {14.1}/bins/ (bin.1.fa, bin.2.fa, ...), with a summary in
+{14.1}/bins/bin.BinInfo.txt (number of contigs, length, coverage).
+How many bins did MetaBAT2 make, compared with SemiBin2 (step 7)? How large
+are they? seqkit stats {14.1}/bins/*.fa"""
+
+[[step.cmd]]
+run = """
+mkdir -p {14.1}
+pixi run -e metabat2 jgi_summarize_bam_contig_depths \\
+    --outputDepth {14.1}/depth.txt \\
+    {6}/sr.sorted.bam"""
+explain = [
+    ["pixi run -e metabat2", "MetaBAT2 is in its own pixi environment, metabat2, as it needs older versions of some libraries than samtools (as for eggNOG-mapper in step 12)"],
+    ["jgi_summarize_bam_contig_depths", "computes the coverage (depth) of each contig from the mapped reads of step 6, in the format MetaBAT2 reads. SemiBin2 computed this itself from the BAM file"],
+    ["--outputDepth", "the coverage table: one line per contig, with its length, mean coverage and its variance"],
+    ["{6}/sr.sorted.bam", "input: the reads mapped to the polished assembly (step 6)"],
+]
+
+[[step.cmd]]
+run = """
+pixi run -e metabat2 metabat2 \\
+    -i {5.2}/polished.fa \\
+    -a {14.1}/depth.txt \\
+    -o {14.1}/bins/bin \\
+    -t {threads}"""
+explain = [
+    ["metabat2", "a binner that uses the same two signals as SemiBin2, composition (tetranucleotide frequencies) and coverage, but without machine learning: it computes a distance between every pair of contigs from these and clusters the contigs on a graph of the closest pairs. It is fast and has been one of the most used binners"],
+    ["-i", "input: the polished contigs (the same as for SemiBin2 in step 7)"],
+    ["-a", "the coverage of each contig (from the command above)"],
+    ["-o {14.1}/bins/bin", "the start of the name of each bin's file: bins/bin.1.fa, bins/bin.2.fa, ... (the folder is created)"],
+    ["-t", "number of threads"],
+]
+
+[[step]]
+id = "14.2"
+title = "Quality of the bins (CheckM2)"
+outputs = ["checkm2/quality_report.tsv"]
+look_at = """
+{14.2}/checkm2/quality_report.tsv, as in step 8:
+sort -t$'\\t' -k2,2gr {14.2}/checkm2/quality_report.tsv | cut -f1-3 | column -t
+How many bins are high quality (>90% complete, <5% contaminated)? And with
+SemiBin2 ({8}/quality_report.tsv)? Did the two binners find the same genomes?
+(Step 15 answers this.)"""
+
+[[step.cmd]]
+run = """
+mkdir -p {14.2}
+checkm2 predict \\
+    -i {14.1}/bins -x fa \\
+    -o {14.2}/checkm2 \\
+    --database_path $CHECKM2DB \\
+    -t {threads} --force"""
+explain = [
+    ["checkm2 predict", "completeness and contamination of each MetaBAT2 bin, as in step 8 for the SemiBin2 bins"],
+    ["-i", "input: the folder with the MetaBAT2 bins"],
+    ["-x fa", "the file extension of the bins"],
+    ["-o", "output folder (inside the step's folder); the results are in quality_report.tsv"],
+    ["--database_path $CHECKM2DB", "the CheckM2 reference database, already installed"],
+    ["-t", "number of threads"],
+    ["--force", "overwrite the output folder if it exists"],
+]
+
+
+[[step]]
+id = "15"
+folder = "15_DEREP"
+title = "Dereplication of the bins of both binners (Galah)"
+outputs = ["clusters.tsv", "representatives.txt"]
+look_at = """
+{15}/clusters.tsv: one line per bin that passed the quality filter, with the
+representative of its cluster (first column) and the bin (second column).
+Bins in the same cluster are the same species (>= 95% ANI): here, mostly the
+same genome found by both binners. {15}/representatives.txt lists the
+representatives: one genome per species.
+How many clusters are there? For each, which binner gave the representative,
+and why (compare their rows in {15}/quality_report.tsv)?
+cut -f1 {15}/clusters.tsv | sort | uniq -c
+Which genomes did only one binner find?"""
+
+[[step.cmd]]
+run = """
+mkdir -p {15}
+cp {8}/quality_report.tsv {15}/quality_report.tsv
+tail -n +2 {14.2}/checkm2/quality_report.tsv >> {15}/quality_report.tsv"""
+explain = [
+    ["cp ... {15}/quality_report.tsv", "Galah reads a single CheckM2 report, so we make one with the bins of both binners: first a copy of the SemiBin2 one (step 8)"],
+    ["tail -n +2 ... >>", "then the lines of the MetaBAT2 report from the second on (without its header line): >> appends them to the file, where > would overwrite it"],
+]
+
+[[step.cmd]]
+run = """
+galah cluster \\
+    --genome-fasta-files {7}/output_bins/*.fa {14.1}/bins/*.fa \\
+    --checkm2-quality-report {15}/quality_report.tsv \\
+    --min-completeness 50 --max-contamination 10 \\
+    --ani 95 \\
+    --output-cluster-definition {15}/clusters.tsv \\
+    --output-representative-list {15}/representatives.txt \\
+    -t {threads}"""
+explain = [
+    ["galah cluster", "dereplication: groups genomes that are the same species, by their average nucleotide identity (ANI, computed with skani), and picks the best genome of each group (cluster) as its representative. It is usually used to combine the bins of many samples, which find the same species again and again; here we combine the bins of two binners on one sample"],
+    ["--genome-fasta-files", "input: the bins of both binners (SemiBin2 from step 7, MetaBAT2 from step 14)"],
+    ["--checkm2-quality-report", "completeness and contamination of every bin (from the commands above), to filter the bins and to choose the representatives. The best one has the highest completeness - 5 x contamination, with a small penalty for many contigs"],
+    ["--min-completeness 50 --max-contamination 10", "ignore bins below medium quality (MIMAG): these are not worth keeping"],
+    ["--ani 95", "bins with at least 95% ANI are the same species (the usual threshold, also used by GTDB)"],
+    ["--output-cluster-definition", "the clusters: one line per bin, with its representative"],
+    ["--output-representative-list", "the list of the representatives (their FASTA files): one genome per species"],
+    ["-t", "number of threads"],
+]

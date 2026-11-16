@@ -11,7 +11,7 @@ the precomputed results instead.
 
 Hidden, for testing and for building the precomputed results:
 
-    metag-ws _run-all -o DIR [--data DIR] [-t THREADS] [--until STEP]
+    metag-ws _run-all -o DIR [--data DIR] [-t THREADS] [--until STEP] [--skip-results-only]
 
 Configuration (environment variables; the defaults are for the workshop
 machine):
@@ -447,6 +447,8 @@ def run_all(argv):
                    help=f'directory with sample_R1/R2/ont.fq.gz (default: {cfg["data"]})')
     p.add_argument('-t', '--threads', type=int, default=cfg['threads'])
     p.add_argument('--until', metavar='STEP', help='stop after this step')
+    p.add_argument('--skip-results-only', action='store_true',
+                   help='do not run the results-only steps (step 13, GTDB-Tk, needs ~130 GB of RAM)')
     args = p.parse_args(argv)
     for v in DB_VARS:
         if not os.environ.get(v):
@@ -461,7 +463,9 @@ def run_all(argv):
         timings.write_text('step\tseconds\tmax_rss_gb\n')
     for leaf in steps.leaves:
         done = workdir / '.done' / leaf.id
-        if done.exists():
+        if args.skip_results_only and leaf.results_only:
+            print(f'== {leaf.id}: results only, skipping', flush=True)
+        elif done.exists():
             print(f'== {leaf.id}: already done, skipping', flush=True)
         else:
             r = Renderer(steps, ctx)

@@ -21,7 +21,8 @@ after changing a script; on failure read `data-prep/logs/jug/`, `pixi run jug
 cleanup --failed-only` and restart. The full-data results in
 `data-prep/runs/full/` are reused.
 
-**`metag-ws` is implemented** (steps 1–13; step 13, GTDB-Tk, results only).
+**`metag-ws` is implemented** (steps 1–15; step 13, GTDB-Tk, results only;
+steps 14–15, MetaBAT2 and Galah, added 2026-11-16).
 Checked by hand: `results-for` and the choice of input folders, the menu and
 state, step 12's MAG. End-to-end test (`data-prep/tests/run_all_sim.sh`, 16
 threads): all 12 steps PASS, 21.0 min (GUNC 349 s, eggNOG-mapper 345 s).
@@ -29,7 +30,20 @@ Precomputed run on the workshop dataset (`run_precomputed.sh`, job
 28124971): steps 1–12 PASS, 26.7 min (vs 24.8 min with `pipeline.sh`), 31
 bins, step 12 on SemiBin_2 (as in the reference run), 6.0 GB before cleanup.
 Step 13 takes ≈130 GB RAM and 40 min with 16 threads (`-m 192`; with
-`--until 12`, `-m 64` is enough).
+`--skip-results-only`, `-m 64` is enough). Steps 14–15 are in the
+precomputed results (job 28394942): 14.1 2 s, 14.2 74 s, 15 < 1 s (≈ 1.3 min
+more in total); MetaBAT2 makes 5 bins, all high quality, and Galah 6
+clusters (each of the five genomes found by both binners). Not yet in the
+end-to-end test (`run_all_sim.sh`).
+
+Galah's conda package depends on `pixi`, so the default environment has its
+own `pixi` (0.84.2), which `pixi run -e …` uses once it is activated. On
+aqua, in the mqyolo sandbox, pixi ≥ 0.84 refuses environments registered
+under the other path of the cache (`/pkg/...` outside, `/mnt/weka/pkg/...`
+inside: "the environment directory has moved"), which pixi 0.80 accepted.
+For job 28394942 the `conda-meta/pixi_env_prefix` of every environment was
+set to the `/mnt/weka` path and restored to `/pkg` afterwards. On the AWS
+machine (one path) this does not arise.
 
 **The workshop notes cover every step**, with lecture slides for binning,
 CheckM1/CheckM2, GUNC and functional annotation.
@@ -63,9 +77,16 @@ Where we differ from GOALS, on purpose:
   them: all bins take ~15 min. GOALS asks that participants "find a function
   of interest across bins"; the notes only search one bin so far (open
   below).
-* **Step 13, GTDB-Tk** (taxonomy of the bins), is not in GOALS. It is the
-  standard bin taxonomy, so it is shown, but results only. Its database is
-  not needed on the workshop machine.
+* **Step 13, GTDB-Tk** (taxonomy of the bins), was not in GOALS at first. It
+  is the standard bin taxonomy, so it is shown, but results only. Its
+  database is not needed on the workshop machine.
+* **Steps 14–15** (a second binner, MetaBAT2, with CheckM2 on its bins; and
+  dereplication of the bins of both binners with Galah, at 95% ANI, keeping
+  bins ≥50% complete and <10% contaminated) were added later. Galah is
+  usually used across samples; with one sample, it shows how the two binners
+  compare and gives one genome per species. MetaBAT2 is in its own pixi
+  environment (`metabat2`): it needs htslib <1.25 and libdeflate 1.22, older
+  than samtools 1.25 and fastplong 0.7. Neither needs a database.
 * **Runtime** above the 15 min target (see Status).
 
 Still open, against GOALS:
@@ -101,6 +122,8 @@ Still open, against GOALS:
    | 11 | Gene prediction (pyrodigal) | `genes` |
    | 12 | eggNOG-mapper | `eggnog` |
    | 13 | GTDB-Tk (results only) | — |
+   | 14.1 / 14.2 | MetaBAT2 / CheckM2 on its bins | — |
+   | 15 | Galah | — |
 
    Differences: each step writes only into its own folder, so `bwa index`
    writes into the step's folder (`-p 05_POLISH/draft`, `-p
@@ -132,8 +155,9 @@ Still open, against GOALS:
    with the shared, read-only installation (otherwise add `--as-is`).
 5. **Results-only steps**: `results-for 13` links all precomputed folders
    (for comparison) without changing `precomputed_upto`, so the other steps
-   keep their inputs. Step 13 is last so that nothing reads its outputs.
-   `_run-all` runs it (for the precomputed results); `--until 12` skips it.
+   keep their inputs. Nothing reads its outputs (steps 14 and 15 do not).
+   `_run-all` runs it (for the precomputed results); `--skip-results-only`
+   skips it.
 6. **`_run-all`** (hidden): records finished steps (`DIR/.done/`) so a killed
    run can be resumed, writes `DIR/timings.tsv` (seconds and peak RAM per
    step), and stops at the first failing command. It ignores the user's

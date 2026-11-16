@@ -35,6 +35,8 @@ polypolish = ">=0.7.1,<0.8"
 minimap2 = ">=2.31,<3"
 samtools = ">=1.25,<2"
 semibin = ">=2.6.0,<3"
+# dereplication of the bins (step 15)
+galah = ">=0.6.4,<0.7"
 checkm2 = ">=1.1.0,<2"
 gunc = ">=1.1.1,<2"
 pyrodigal = ">=3.7.1,<4"
@@ -66,6 +68,11 @@ eggnog-mapper = ">=2.1.15,<3"
 # (2.8 uses GTDB r232).
 [feature.gtdbtk.dependencies]
 gtdbtk = ">=2.8.0,<3"
+
+# MetaBAT2 (step 14, a second binner) needs older htslib and libdeflate than
+# samtools and fastplong: `pixi run -e metabat2 metabat2 ...`
+[feature.metabat2.dependencies]
+metabat2 = ">=2.18,<3"
 
 # also here, as the environment does not include the default feature
 [feature.gtdbtk.activation.env]
@@ -103,4 +110,5 @@ site = "bash materials/site.sh"
 [environments]
 eggnog = { features = ["eggnog"], no-default-feature = true }
 gtdbtk = { features = ["gtdbtk"], no-default-feature = true }
+metabat2 = { features = ["metabat2"], no-default-feature = true }
 docs = { features = ["docs"], no-default-feature = true }

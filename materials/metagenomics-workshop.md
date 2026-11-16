@@ -49,11 +49,14 @@ digraph pipeline {
   genes  [label="11. Genes\npyrodigal"];
   egg    [label="12. Annotation\neggNOG-mapper"];
   gtdb   [label="13. Taxonomy\nGTDB-Tk", style="rounded,dashed,filled"];
+  mb     [label="14. Binning\nMetaBAT2 + CheckM2"];
+  derep  [label="15. Dereplication\nGalah"];
   data -> qc -> singlem;
   qc -> asm -> polish -> map -> bin;
   bin -> checkm; bin -> gunc; bin -> appr; singlem -> appr;
   bin -> genes -> egg;
   bin -> gtdb [style=dashed];
+  map -> mb -> derep; bin -> derep; checkm -> derep;
 }
 ```
 
@@ -81,6 +84,7 @@ At the end of the workshop, you should be able to
 - find a function of interest in an annotated genome
 - read the taxonomic classification of a bin, and tell when it may be a new
   species
+- combine the bins of two binners, keeping one genome per species
 
 ::: instructor
 TODO: a slide or two of background on metagenomics, short vs. long reads,
@@ -163,7 +167,7 @@ Each step has its own numbered folder:
 01_DATA     02_QC        03_SINGLEM   04_ASSEMBLY
 05_POLISH   06_MAPPING   07_BINNING   08_CHECKM2
 09_GUNC     10_APPRAISE  11_GENES     12_EGGNOG
-13_GTDBTK
+13_GTDBTK   14_METABAT2  15_DEREP
 ```
 
 ::: handout
@@ -1307,6 +1311,195 @@ genomes that are not in GTDB. GTDB-Tk itself warns that its classification
 is not enough to name new taxa (that needs a de novo tree).
 :::
 
+# Step 14: A second binner (MetaBAT2)
+
+## Why a second binner?
+
+- Binning is hard, and no binner is the best on every sample: each makes
+  its own mistakes and misses different genomes
+- So it is common to run several binners and then combine their bins
+  (Step 15)
+- MetaBAT2 uses the same signals as SemiBin2 (composition and coverage),
+  but no machine learning: it computes a distance between pairs of contigs
+  and clusters them on a graph of the closest pairs
+
+::: handout
+MetaBAT2 has long been one of the most used binners: it is fast and needs no
+training. SemiBin2 usually recovers more high-quality bins, but not on every
+sample, and the two do not always find the same genomes. Tools such as DAS
+Tool combine the bins of several binners into one better set (see [Tools
+and references](#binning-steps-7-and-14)); here, we compare them and keep
+the best bin of each species (Step 15).
+:::
+
+## 14.1: Bin the contigs
+
+Compute the coverage of each contig, from the mapping of Step 6:
+
+```bash
+mkdir -p 14_METABAT2
+pixi run -e metabat2 jgi_summarize_bam_contig_depths \
+    --outputDepth 14_METABAT2/depth.txt \
+    06_MAPPING/sr.sorted.bam
+```
+
+Bin the same polished contigs as in Step 7:
+
+```bash
+pixi run -e metabat2 metabat2 \
+    -i 05_POLISH/polished.fa \
+    -a 14_METABAT2/depth.txt \
+    -o 14_METABAT2/bins/bin \
+    -t 8
+```
+
+::: handout
+SemiBin2 computed the coverage itself from the BAM file; MetaBAT2 reads it
+from a table (`depth.txt`: length, mean coverage and its variance for each
+contig). The bins are `14_METABAT2/bins/bin.1.fa`, `bin.2.fa`, …, with a
+summary in `bin.BinInfo.txt`. MetaBAT2 is in its own environment
+(`metabat2`), like eggNOG-mapper in step 12.
+
+Tool: [MetaBAT 2](https://bitbucket.org/berkeleylab/metabat)
+([Kang et al., 2019](https://doi.org/10.7717/peerj.7359)).
+:::
+
+## 14.2: Quality of the bins (CheckM2)
+
+As in Step 8, for the MetaBAT2 bins:
+
+```bash
+mkdir -p 14_METABAT2
+checkm2 predict \
+    -i 14_METABAT2/bins -x fa \
+    -o 14_METABAT2/checkm2 \
+    --database_path $CHECKM2DB \
+    -t 8 --force
+```
+
+## Look at the MetaBAT2 bins
+
+```bash
+seqkit stats 14_METABAT2/bins/*.fa
+sort -t$'\t' -k2,2gr 14_METABAT2/checkm2/quality_report.tsv | cut -f1-3 | column -t
+```
+
+- How many bins did MetaBAT2 make? And SemiBin2 (Step 7)?
+- How many are high quality, with each binner?
+- Did the two binners find the same genomes? (Step 15 tells us.)
+
+::: instructor
+Our results (precomputed run): MetaBAT2 makes 5 bins (SemiBin2: 31), all
+high quality (94.8–100% complete, ≤2.1% contaminated): the five genomes of
+the dataset. It leaves out the small, low-coverage contigs of the background
+(by default, a bin must be at least 200 kbp), which SemiBin2 puts in small
+bins that are mostly <15% complete.
+:::
+
+# Step 15: Dereplication (Galah)
+
+## The same genome, many times
+
+```{.dot width=80%}
+digraph derep {
+  rankdir=LR;
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,
+        fillcolor="#eceff1", color="#37474f"];
+  edge [color="#37474f"];
+  subgraph cluster_bins {
+    label="bins"; fontname="DejaVu Sans"; color="#90a4ae";
+    s0 [label="SemiBin_0\n98% complete"];
+    m5 [label="bin.5\n98% complete, 2% contam."];
+    s1 [label="SemiBin_1\n99% complete"];
+    m3 [label="bin.3\n99.8% complete"];
+  }
+  subgraph cluster_reps {
+    label="representatives"; fontname="DejaVu Sans"; color="#90a4ae";
+    r0 [label="SemiBin_0", fillcolor="#c8e6c9"];
+    r1 [label="bin.3", fillcolor="#c8e6c9"];
+  }
+  s0 -> r0; m5 -> r0 [style=dashed];
+  s1 -> r1 [style=dashed]; m3 -> r1;
+}
+```
+
+- Bins with ≥95% average nucleotide identity (ANI) are the same species
+- *Dereplication* groups them and keeps the best bin of each group
+
+::: handout
+The same species is often binned more than once: by different binners (as
+here), from different assemblies, and, above all, from different samples of
+a study. Dereplication clusters the bins by ANI (the identity of the parts of
+two genomes that align, computed with skani) and keeps one *representative*
+per cluster, the best by completeness and contamination. 95% ANI is the
+usual threshold for a species, as in GTDB (Step 13).
+
+The result is a set of genomes, one per species, to use as a reference for
+the sample (or the study): e.g., to map the reads of every sample to it and
+compare the abundance of each species.
+:::
+
+## Dereplicate the bins of both binners
+
+Galah reads one CheckM2 report: join those of both binners (without the
+second header line):
+
+```bash
+mkdir -p 15_DEREP
+cp 08_CHECKM2/quality_report.tsv 15_DEREP/quality_report.tsv
+tail -n +2 14_METABAT2/checkm2/quality_report.tsv >> 15_DEREP/quality_report.tsv
+```
+
+Cluster at 95% ANI, keeping only bins of at least medium quality:
+
+```bash
+galah cluster \
+    --genome-fasta-files 07_BINNING/output_bins/*.fa 14_METABAT2/bins/*.fa \
+    --checkm2-quality-report 15_DEREP/quality_report.tsv \
+    --min-completeness 50 --max-contamination 10 \
+    --ani 95 \
+    --output-cluster-definition 15_DEREP/clusters.tsv \
+    --output-representative-list 15_DEREP/representatives.txt \
+    -t 8
+```
+
+::: handout
+`>>` appends to a file (`>` would overwrite it). The representative of each
+cluster is the bin with the highest completeness − 5 × contamination, with a
+small penalty for many contigs (or ambiguous bases).
+
+Tool: [Galah](https://github.com/wwood/galah)
+([Aroney et al., 2024](https://doi.org/10.5281/zenodo.13637856)), with
+[skani](https://github.com/bluenote-1577/skani)
+([Shaw and Yu, 2023](https://doi.org/10.1038/s41592-023-02018-3)).
+:::
+
+## Look at the clusters
+
+`15_DEREP/clusters.tsv`: for each bin, the representative of its cluster
+(first column) and the bin (second column). `representatives.txt`: one
+genome per species.
+
+```bash
+column -t 15_DEREP/clusters.tsv
+cat 15_DEREP/representatives.txt
+```
+
+- How many clusters (species) are there?
+- Which binner gave each representative, and why? Compare their rows in
+  `15_DEREP/quality_report.tsv`
+- Which genomes did only one binner find?
+
+::: instructor
+Our results (precomputed run): 11 bins pass the filter (6 SemiBin2, 5
+MetaBAT2) and form 6 clusters. Each of the five genomes is found by both
+binners; the representatives are SemiBin_0, SemiBin_2 and SemiBin_3 (with
+MetaBAT2's bin.5, bin.4 and bin.1) and MetaBAT2's bin.3 and bin.2 (with
+SemiBin_1 and SemiBin_4). SemiBin_5 (58% complete) is a cluster on its own:
+only SemiBin2 found it. Where completeness and contamination are close, the
+penalty for the number of contigs decides.
+:::
+
 # Public MAG databases
 
 ## Public databases of MAGs {.lecture}
@@ -1369,10 +1562,10 @@ The site can filter the genomes by quality and taxonomy, and download them
 
 ::: handout
 Comparing genomes needs the average nucleotide identity (ANI) between them,
-the same measure GTDB-Tk uses in step 13: tools such as skani or dRep (see
-[Beyond this workshop](#beyond-this-workshop)) compute it between your bins
-and a set of downloaded genomes. Two genomes above 95% ANI are usually taken
-to be the same species.
+the same measure GTDB-Tk uses in step 13 and Galah in step 15: the same
+tools (skani, Galah, dRep; see [Dereplication](#dereplication-step-15)) can
+compare your bins with a set of downloaded genomes. Two genomes above 95% ANI
+are usually taken to be the same species.
 :::
 
 # Wrap-up
@@ -1380,10 +1573,10 @@ to be the same species.
 ## What we did
 
 From short and long reads of one soil sample to quality-checked, annotated
-and classified draft genomes:
+and classified draft genomes, one per species:
 
 QC → profiling → assembly → polishing → mapping → binning → quality checks →
-gene prediction → annotation → taxonomy
+gene prediction → annotation → taxonomy → a second binner → dereplication
 
 ::: instructor
 TODO: what changes on real (full-size) data: runtimes and resources, and
@@ -1630,11 +1823,11 @@ not ranked, and not all of them work with every kind of data.
   CoverM: read alignment statistics for metagenomics. *Bioinformatics*.
   <https://doi.org/10.1093/bioinformatics/btaf147>
 
-### Binning (step 7)
+### Binning (steps 7 and 14)
 
 **Used:**
 
-- [SemiBin2](https://github.com/BigDataBiology/SemiBin): deep learning on
+- [SemiBin2](https://github.com/BigDataBiology/SemiBin) (step 7): deep learning on
   contig composition and coverage, with models pretrained for several
   environments, and support for long-read assemblies.
   - Pan S, Zhao X-M, Coelho LP (2023). SemiBin2: self-supervised contrastive
@@ -1645,13 +1838,13 @@ not ranked, and not all of them work with every kind of data.
     improves metagenome-assembled genomes in microbiome datasets across
     different environments. *Nature Communications*.
     <https://doi.org/10.1038/s41467-022-29843-y>
+- [MetaBAT 2](https://bitbucket.org/berkeleylab/metabat) (step 14): fast and
+  widely used. Kang DD, et al. (2019). MetaBAT 2: an adaptive binning
+  algorithm for robust and efficient genome reconstruction from metagenome
+  assemblies. *PeerJ*. <https://doi.org/10.7717/peerj.7359>
 
 **Alternatives:**
 
-- [MetaBAT 2](https://bitbucket.org/berkeleylab/metabat): fast and widely
-  used. Kang DD, et al. (2019). MetaBAT 2: an adaptive binning algorithm for
-  robust and efficient genome reconstruction from metagenome assemblies.
-  *PeerJ*. <https://doi.org/10.7717/peerj.7359>
 - [VAMB](https://github.com/RasmussenLab/vamb): variational autoencoders;
   best with many samples. Nissen JN, et al. (2021). Improved metagenome
   binning and assembly using deep variational autoencoders. *Nature
@@ -1857,6 +2050,28 @@ not ranked, and not all of them work with every kind of data.
   using PhyloPhlAn 3.0. *Nature Communications*.
   <https://doi.org/10.1038/s41467-020-16366-7>
 
+### Dereplication (step 15)
+
+**Used:**
+
+- [Galah](https://github.com/wwood/galah): clusters genomes by ANI and picks
+  the best of each cluster (by CheckM2 quality); it can also run CheckM2
+  itself. Aroney STN, Camargo AP, Tyson GW, Woodcroft BJ (2024). Galah: More
+  scalable dereplication for metagenome assembled genomes. *Zenodo*.
+  <https://doi.org/10.5281/zenodo.13637856>
+- skani (step 13, above) computes the ANI between the bins for Galah.
+
+**Alternatives:**
+
+- [dRep](https://github.com/MrOlm/drep): the first widely used
+  dereplication tool. Olm MR, Brown CT, Brooks B, Banfield JF (2017). dRep: a
+  tool for fast and accurate genomic comparisons that enables improved
+  genome recovery from metagenomes through de-replication. *The ISME
+  Journal*. <https://doi.org/10.1038/ismej.2017.126>
+- DAS Tool (in [Binning](#binning-steps-7-and-14), above): instead of
+  choosing between whole bins, builds a better set of bins from the bins of
+  several binners.
+
 ### Public MAG databases
 
 - [SPIRE](https://spire.embl.de/): MAGs and metagenomes, with their
@@ -1878,15 +2093,6 @@ not ranked, and not all of them work with every kind of data.
 
 Steps that a full analysis usually adds:
 
-- Dereplication, to keep one genome per species across samples:
-  - [dRep](https://github.com/MrOlm/drep). Olm MR, Brown CT, Brooks B,
-    Banfield JF (2017). dRep: a tool for fast and accurate genomic
-    comparisons that enables improved genome recovery from metagenomes
-    through de-replication. *The ISME Journal*.
-    <https://doi.org/10.1038/ismej.2017.126>
-  - [galah](https://github.com/wwood/galah). No paper.
-  - skani (step 13, above) also computes the average nucleotide identity
-    (ANI) between bins that dereplication needs.
 - Pipelines that run the whole analysis, from reads to annotated bins:
   - [nf-core/mag](https://nf-co.re/mag). Krakau S, Straub D, Gourlé H,
     Gabernet G, Nahnsen S (2022). nf-core/mag: a best-practice pipeline for

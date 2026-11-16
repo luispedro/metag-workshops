@@ -148,6 +148,8 @@ The workshop will have different steps with substeps:
 11. Gene prediction (pyrodigal)
 12. eggNOG-mapper
 13. GTDB-Tk (shown but not run due to runtime and memory requirements)
+14. A second binner (MetaBAT2; 14.1: binning; 14.2: CheckM2 on its bins)
+15. Dereplication of the bins of both binners (Galah)
 
 To enable this, we want to add a special command, `metag-ws`, which has the
 following subcommands:
