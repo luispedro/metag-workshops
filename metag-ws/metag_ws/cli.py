@@ -20,6 +20,7 @@ machine):
     METAG_WS_DATA         shared directory with the reads (/opt/metag-ws/data)
     METAG_WS_PRECOMPUTED  shared precomputed results (/opt/metag-ws/precomputed)
     METAG_WS_THREADS      threads per participant (8)
+    METAG_WS_BACKGROUND   light or dark, to override the terminal's (detected)
 """
 import argparse
 import glob
@@ -37,6 +38,7 @@ from rich.console import Console
 from rich.markup import escape
 from rich.syntax import Syntax
 from rich.table import Table
+from rich.theme import Theme
 
 STEPS_FILE = Path(__file__).with_name('steps.toml')
 PRECOMPUTED_SUFFIX = '_precomputed'
@@ -46,6 +48,89 @@ DB_VARS = ['SINGLEM_METAPACKAGE_PATH', 'CHECKM2DB', 'GUNC_DB', 'EGGNOG_DATA_DIR'
 
 out = Console(highlight=False)
 err = Console(stderr=True, highlight=False, soft_wrap=True)
+
+
+# --- colours ------------------------------------------------------------------
+# Plain ANSI yellow and cyan are hard to read on a light background, so the
+# styles depend on the terminal's background (detected in setup_colours).
+
+THEMES = {
+    'dark': Theme({'warn': 'yellow', 'error': 'red', 'arg': 'bold cyan',
+                   'tag.precomputed': 'cyan', 'tag.done': 'green', 'tag.last': 'yellow'}),
+    'light': Theme({'warn': 'dark_orange3', 'error': 'red3', 'arg': 'bold blue',
+                    'tag.precomputed': 'blue', 'tag.done': 'green4', 'tag.last': 'dark_orange3',
+                    'rule.line': 'green4'}),
+}
+SYNTAX_THEME = {'dark': 'ansi_dark', 'light': 'ansi_light'}
+BACKGROUND = 'dark'
+
+
+def query_terminal_background(timeout=0.5):
+    """Ask the terminal for its background colour (OSC 11); 'light', 'dark' or None.
+
+    A device-attributes query (DA1), which practically all terminals answer, is
+    sent right after, so terminals that ignore OSC 11 do not cost the timeout.
+    """
+    import select
+    import termios
+    try:
+        fd = os.open('/dev/tty', os.O_RDWR | os.O_NOCTTY)
+    except OSError:
+        return None
+    try:
+        old = termios.tcgetattr(fd)
+        new = termios.tcgetattr(fd)
+        new[3] &= ~(termios.ICANON | termios.ECHO)
+        new[6][termios.VMIN] = 0
+        new[6][termios.VTIME] = 0
+        termios.tcsetattr(fd, termios.TCSANOW, new)
+        try:
+            os.write(fd, b'\033]11;?\033\\\033[c')
+            buf = b''
+            deadline = time.monotonic() + timeout
+            while not re.search(rb'\033\[\?[\d;]*c', buf):
+                left = deadline - time.monotonic()
+                if left <= 0 or not select.select([fd], [], [], left)[0]:
+                    break
+                chunk = os.read(fd, 1024)
+                if not chunk:
+                    break
+                buf += chunk
+        finally:
+            termios.tcsetattr(fd, termios.TCSANOW, old)
+    except (OSError, termios.error):
+        return None
+    finally:
+        os.close(fd)
+    m = re.search(rb'\]11;rgba?:([0-9a-fA-F]+)/([0-9a-fA-F]+)/([0-9a-fA-F]+)', buf)
+    if not m:
+        return None
+    r, g, b = (int(x, 16) / (16 ** len(x) - 1) for x in m.groups())
+    return 'light' if 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5 else 'dark'
+
+
+def detect_background():
+    """'light' or 'dark': METAG_WS_BACKGROUND, else ask the terminal, else COLORFGBG, else dark"""
+    forced = os.environ.get('METAG_WS_BACKGROUND', '').lower()
+    if forced in ('light', 'dark'):
+        return forced
+    if not (out.is_terminal and out.color_system) or os.environ.get('TERM') == 'dumb':
+        return 'dark'
+    bg = query_terminal_background()
+    if bg:
+        return bg
+    # e.g. COLORFGBG=0;15 (black on white), set by rxvt, konsole and others
+    fgbg = os.environ.get('COLORFGBG', '').split(';')[-1]
+    if fgbg.isdigit():
+        return 'light' if int(fgbg) in (7, 15) else 'dark'
+    return 'dark'
+
+
+def setup_colours():
+    global BACKGROUND
+    BACKGROUND = detect_background()
+    for c in (out, err):
+        c.push_theme(THEMES[BACKGROUND])
 
 
 class UserError(Exception):
@@ -264,11 +349,11 @@ def choose_step(steps, state, ctx, action):
         tags = []
         if st.is_leaf and (ctx.upto and step_key(st.id) <= step_key(ctx.upto)
                            or st.results_only and (ctx.workdir / (st.folder + PRECOMPUTED_SUFFIX)).exists()):
-            tags.append('[cyan]precomputed[/]')
+            tags.append('[tag.precomputed]precomputed[/]')
         if st.is_leaf and done_outputs(st, ctx.workdir):
-            tags.append('[green]done[/]')
+            tags.append('[tag.done]done[/]')
         if st is last:
-            tags.append('[yellow]last used[/]')
+            tags.append('[tag.last]last used[/]')
         mark = '[bold]>[/]' if st is default else ' '
         line = f'{mark} {label:<{58 if sub else 60}} {" ".join(tags)}'
         if st is last:
@@ -289,7 +374,7 @@ def choose_step(steps, state, ctx, action):
         try:
             return steps.get(ans)
         except UserError as e:
-            err.print(f'[red]{escape(str(e))}[/]')
+            err.print(f'[error]{escape(str(e))}[/]')
 
 
 def pick(steps, args, state, ctx, action):
@@ -322,7 +407,7 @@ def warn_cwd(ctx):
     if not same:
         d = pretty(ctx.workdir)
         how = f'cd {d}' if ctx.workdir.is_dir() else f'mkdir -p {d} && cd {d}'
-        err.print(f'[yellow]Run the commands in your workshop folder, {escape(d)}: {escape(how)}[/]')
+        err.print(f'[warn]Run the commands in your workshop folder, {escape(d)}: {escape(how)}[/]')
 
 
 def warn_missing(r, st):
@@ -330,7 +415,7 @@ def warn_missing(r, st):
     if missing:
         last = missing[-1][0].id
         which = ', '.join(f'{ref.id} ({folder}/)' for ref, folder in missing)
-        err.print(f'[yellow]Step {st.id} needs the outputs of step{"s" if len(missing) > 1 else ""} {which}, '
+        err.print(f'[warn]Step {st.id} needs the outputs of step{"s" if len(missing) > 1 else ""} {which}, '
                   f'which are not there yet. Run {"them" if len(missing) > 1 else "it"} first '
                   f'(metag-ws show-cmd {last}), or use the precomputed results (metag-ws results-for {last}).[/]')
 
@@ -349,7 +434,7 @@ def cmd_show(steps, args):
         if i:
             print()
         if leaf.results_only:
-            err.print(f'[yellow][bold]Results only: do not run this step.[/bold]\n{escape(leaf.results_only)}[/]')
+            err.print(f'[warn][bold]Results only: do not run this step.[/bold]\n{escape(leaf.results_only)}[/]')
         else:
             warn_missing(r, leaf)
         print('\n'.join(r.header(leaf)))
@@ -370,17 +455,17 @@ def cmd_explain(steps, args):
     for leaf in st.leaves():
         out.rule(f'[bold]Step {leaf.id}: {escape(leaf.full_title())}')
         if leaf.results_only:
-            out.print(f'[yellow][bold]Results only: do not run this step.[/bold]\n{escape(leaf.results_only)}[/]',
+            out.print(f'[warn][bold]Results only: do not run this step.[/bold]\n{escape(leaf.results_only)}[/]',
                       soft_wrap=True)
         else:
             warn_missing(r, leaf)
         for line in r.header(leaf)[1:]:
             out.print(f'[dim]{escape(line)}[/]', soft_wrap=True)
         for c in leaf.cmds:
-            out.print(Syntax(r.render(c['run'], leaf).strip('\n'), 'bash', theme='ansi_dark',
+            out.print(Syntax(r.render(c['run'], leaf).strip('\n'), 'bash', theme=SYNTAX_THEME[BACKGROUND],
                              background_color='default', word_wrap=True))
             table = Table(show_header=False, box=None, padding=(0, 2, 0, 2))
-            table.add_column(style='bold cyan', no_wrap=True, max_width=36)
+            table.add_column(style='arg', no_wrap=True, max_width=36)
             table.add_column()
             for arg, text in c.get('explain', []):
                 table.add_row(escape(r.render(arg, leaf)), escape(r.render(text, leaf)))
@@ -420,7 +505,7 @@ def cmd_results_for(steps, args):
         out.print(f'\nPrecomputed results of steps 1 to {upto} are in [bold]{escape(pretty(ctx.workdir))}[/], '
                   f'in the *{PRECOMPUTED_SUFFIX} folders (your own folders are not changed). '
                   f'The commands of the other steps still use the same inputs as before.')
-        out.print('[yellow]Note: these results may not be exactly the same as your own: for example, '
+        out.print('[warn]Note: these results may not be exactly the same as your own: for example, '
                   'bin names and numbers can differ between runs.[/]')
         return
     state['precomputed_upto'] = upto
@@ -428,7 +513,7 @@ def cmd_results_for(steps, args):
     nxt = steps.next_after(steps.by_id[upto]) if upto != steps.leaves[-1].id else None
     out.print(f'\nPrecomputed results of steps 1 to {upto} are in [bold]{escape(pretty(ctx.workdir))}[/], '
               f'in the *{PRECOMPUTED_SUFFIX} folders (your own folders are not changed).')
-    out.print('[yellow]Note: these results may not be exactly the same as your own: for example, '
+    out.print('[warn]Note: these results may not be exactly the same as your own: for example, '
               'contig names and bin names and numbers can differ between runs.[/]')
     if nxt:
         out.print(f'From now on, the commands from [bold]metag-ws show-cmd[/] use them as inputs '
@@ -515,9 +600,10 @@ def main(argv=None):
             sp.add_argument('step', nargs='?', metavar='STEP')
             sp.set_defaults(fn=fn)
         args = p.parse_args(argv)
+        setup_colours()
         args.fn(steps, args)
     except UserError as e:
-        err.print(f'[red]metag-ws: {escape(str(e))}[/]')
+        err.print(f'[error]metag-ws: {escape(str(e))}[/]')
         return 1
     except KeyboardInterrupt:
         return 130
