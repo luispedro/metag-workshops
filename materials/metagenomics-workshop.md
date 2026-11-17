@@ -198,10 +198,11 @@ metag-ws results-for
 - `results-for` brings in our precomputed results, up to the step you choose
   (see the next slide).
 
-Without a step, each of them shows a menu of the steps: the step you used last
-is highlighted, and pressing Enter selects the **next** one, so as you go
-through the workshop you can mostly just press Enter. Steps you have finished
-are marked `done`.
+Without a step, each of them shows a menu of the steps: move with the arrow
+keys and press Enter, or type the step number. The menu starts on the step
+**after** the one you used last (marked `last used`), so as you go through the
+workshop you can mostly just press Enter. Steps you have finished are marked
+`done`.
 
 You can also give the step directly: a whole step (`metag-ws show-cmd 5`) or
 a substep (`metag-ws show-cmd 5.2`).

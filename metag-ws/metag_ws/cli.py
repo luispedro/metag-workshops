@@ -21,6 +21,7 @@ machine):
     METAG_WS_PRECOMPUTED  shared precomputed results (/opt/metag-ws/precomputed)
     METAG_WS_THREADS      threads per participant (8)
     METAG_WS_BACKGROUND   light or dark, to override the terminal's (detected)
+    METAG_WS_MENU         plain: a typed menu instead of the arrow-key one
 """
 import argparse
 import glob
@@ -38,6 +39,7 @@ from rich.console import Console
 from rich.markup import escape
 from rich.syntax import Syntax
 from rich.table import Table
+from rich.text import Text
 from rich.theme import Theme
 
 STEPS_FILE = Path(__file__).with_name('steps.toml')
@@ -339,23 +341,216 @@ def done_outputs(st, workdir):
 
 # --- the menu -------------------------------------------------------------------
 
+def menu_label(st, ctx, last):
+    """The menu line of `st` (markup), without the cursor mark."""
+    sub = st.parent is not None
+    label = f'{st.id:>{6 if sub else 4}}  {escape(st.title)}'
+    tags = []
+    if st.is_leaf and (ctx.upto and step_key(st.id) <= step_key(ctx.upto)
+                       or st.results_only and (ctx.workdir / (st.folder + PRECOMPUTED_SUFFIX)).exists()):
+        tags.append('[tag.precomputed]precomputed[/]')
+    if st.is_leaf and done_outputs(st, ctx.workdir):
+        tags.append('[tag.done]done[/]')
+    if st is last:
+        tags.append('[tag.last]last used[/]')
+    return f'{label:<{58 if sub else 60}} {" ".join(tags)}'
+
+
+def use_key_menu():
+    return (os.environ.get('METAG_WS_MENU', '').lower() != 'plain'
+            and sys.stdin.isatty() and out.is_terminal and os.environ.get('TERM') != 'dumb')
+
+
 def choose_step(steps, state, ctx, action):
+    """The step chosen in the menu, or None. The menu starts on the step
+    after the last one used."""
     last = steps.by_id.get(state.get('last', ''))
     default = steps.next_after(last) if last else steps.tops[0]
+    labels = [menu_label(st, ctx, last) for st in steps.order]
+    if use_key_menu():
+        import termios
+        try:
+            return KeyMenu(steps, labels, default, action).run()
+        except termios.error:
+            pass   # not a real terminal after all: the typed menu
+    return choose_step_typed(steps, labels, last, default, action)
+
+
+class KeyMenu:
+    """Choose with the arrow keys (or j/k, PgUp/PgDn, Home/End) and Enter, or
+    type a step number (the cursor follows) and Enter.
+
+    Drawn inline (not full screen), at most as tall as the terminal (scrolling
+    if needed), and erased when done, so the output that follows is the same
+    as with the step on the command line.
+    """
+    KEYS = {'\x1b[A': 'up', '\x1bOA': 'up', 'k': 'up',
+            '\x1b[B': 'down', '\x1bOB': 'down', 'j': 'down',
+            '\x1b[5~': 'pgup', '\x1b[6~': 'pgdown',
+            '\x1b[H': 'home', '\x1bOH': 'home', '\x1b[1~': 'home', '\x1b[7~': 'home',
+            '\x1b[F': 'end', '\x1bOF': 'end', '\x1b[4~': 'end', '\x1b[8~': 'end',
+            '\r': 'enter', '\n': 'enter', '\x7f': 'backspace', '\x08': 'backspace',
+            'q': 'quit', 'Q': 'quit', '\x1b': 'quit', '\x04': 'quit', '\x03': 'interrupt'}
+    KEY_RE = re.compile(r'\x1b\[[0-9;]*[A-Za-z~]|\x1bO[A-Za-z]|.', re.DOTALL)
+    INCOMPLETE = re.compile(r'\x1b(\[[0-9;]*|O)?\Z')   # an escape sequence cut short
+    HINT = '[dim]Up/Down to move, Enter to choose, or type a step number; q to quit[/]'
+
+    def __init__(self, steps, labels, default, action):
+        self.steps = steps
+        self.rows = steps.order
+        self.labels = labels
+        self.action = action
+        self.cursor = self.rows.index(default)
+        self.top = 0          # first row shown, when they do not all fit
+        self.typed = ''       # step number being typed
+        self.message = ''
+        self.drawn = 0        # lines on screen
+        self.drawn_size = None
+        self.result = None
+
+    def write(self, s):
+        sys.stdout.write(s)
+        sys.stdout.flush()
+
+    def size(self):
+        try:
+            return tuple(os.get_terminal_size(sys.stdout.fileno()))
+        except OSError:
+            return (80, 24)
+
+    def run(self):
+        import codecs
+        import termios
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        new = termios.tcgetattr(fd)
+        # no line editing or echo; Ctrl-C arrives as a key, so the terminal is
+        # restored and the menu erased before stopping
+        new[3] &= ~(termios.ICANON | termios.ECHO | termios.ISIG)
+        new[6][termios.VMIN] = 1
+        new[6][termios.VTIME] = 0
+        termios.tcsetattr(fd, termios.TCSANOW, new)
+        self.decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
+        self.write('\033[?25l')   # hide the cursor
+        try:
+            self.draw()
+            while True:
+                for key in self.keys(fd):
+                    if self.handle(key):
+                        return self.result
+                self.draw()
+        finally:
+            self.erase()
+            self.write('\033[?25h')
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+    def keys(self, fd):
+        """The next keys pressed ([] if the terminal was resized)."""
+        import select
+        while not select.select([fd], [], [], 0.25)[0]:
+            if self.size() != self.drawn_size:
+                return []
+        chunk = os.read(fd, 1024)
+        if not chunk:
+            return ['\x04']
+        data = self.decoder.decode(chunk)
+        while self.INCOMPLETE.search(data) and select.select([fd], [], [], 0.05)[0]:
+            data += self.decoder.decode(os.read(fd, 1024))
+        return self.KEY_RE.findall(data)
+
+    def handle(self, key):
+        """Act on `key`; True when done (the choice in self.result)."""
+        k = self.KEYS.get(key, key)
+        self.message = ''
+        if k == 'interrupt':
+            raise KeyboardInterrupt
+        if k == 'quit':
+            return True
+        if k == 'enter':
+            if not self.typed:
+                self.result = self.rows[self.cursor]
+                return True
+            try:
+                self.result = self.steps.get(self.typed)
+                return True
+            except UserError:
+                self.message = f'No step {self.typed}'
+                self.typed = ''
+                return False
+        if k == 'backspace' or (len(k) == 1 and (k.isdigit() or k == '.')):
+            self.typed = self.typed[:-1] if k == 'backspace' else self.typed + k
+            try:
+                self.cursor = self.rows.index(self.steps.get(self.typed))
+            except UserError:
+                pass
+            return False
+        page = max(self.size()[1] - 6, 1)
+        moves = {'up': -1, 'down': 1, 'pgup': -page, 'pgdown': page,
+                 'home': -len(self.rows), 'end': len(self.rows)}
+        if k in moves:
+            self.typed = ''
+            self.cursor = max(0, min(len(self.rows) - 1, self.cursor + moves[k]))
+        return False
+
+    def go_to_top(self):
+        return '\r' + (f'\033[{self.drawn - 1}A' if self.drawn > 1 else '')
+
+    def erase(self):
+        if self.drawn:
+            self.write(self.go_to_top() + '\033[J')
+            self.drawn = 0
+
+    def draw(self):
+        cols, lines = self.size()
+        if self.drawn and (cols, lines) != self.drawn_size:
+            # the terminal may have re-wrapped what was drawn: start afresh
+            self.write('\033[H\033[2J')
+            self.drawn = 0
+        self.drawn_size = (cols, lines)
+        n = len(self.rows)
+        avail = max(lines - 2, 3)   # without the header and footer lines
+        scroll = n > avail
+        if scroll:
+            shown = max(avail - 2, 1)   # without the "more" lines
+            self.top = max(0, min(self.top, self.cursor, n - shown), self.cursor - shown + 1)
+        else:
+            self.top, shown = 0, n
+        text = [f'[bold]Workshop steps[/] ({escape(self.action)}):']
+        if scroll:
+            text.append(f'[dim]     ({self.top} more above)[/]' if self.top else '')
+        for i in range(self.top, self.top + shown):
+            if i == self.cursor:
+                text.append(f'[reverse][bold]>[/bold] {self.labels[i]}[/reverse]')
+            else:
+                text.append(f'  {self.labels[i]}')
+        if scroll:
+            below = n - self.top - shown
+            text.append(f'[dim]     ({below} more below)[/]' if below else '')
+        if self.message:
+            text.append(f'[error]{escape(self.message)}[/]  {self.HINT}')
+        elif self.typed:
+            text.append(f'Step: [bold]{escape(self.typed)}[/]')
+        else:
+            text.append(self.HINT)
+        rendered = []
+        width = max(cols - 1, 20)
+        for t in text:
+            t = Text.from_markup(t)
+            if t.cell_len > width:
+                t.rstrip()   # the padding before the tags, so only real cuts show '…'
+            with out.capture() as cap:
+                out.print(t, no_wrap=True, overflow='ellipsis', width=width)
+            rendered.append(cap.get().rstrip('\n'))
+        self.write(self.go_to_top() + '\033[J' + '\n'.join(rendered))
+        self.drawn = len(rendered)
+
+
+def choose_step_typed(steps, labels, last, default, action):
+    """The menu without cursor keys: type the step (Enter for the default)."""
     out.print(f'[bold]Workshop steps[/] ({action}):')
-    for st in steps.order:
-        sub = st.parent is not None
-        label = f'{st.id:>{6 if sub else 4}}  {escape(st.title)}'
-        tags = []
-        if st.is_leaf and (ctx.upto and step_key(st.id) <= step_key(ctx.upto)
-                           or st.results_only and (ctx.workdir / (st.folder + PRECOMPUTED_SUFFIX)).exists()):
-            tags.append('[tag.precomputed]precomputed[/]')
-        if st.is_leaf and done_outputs(st, ctx.workdir):
-            tags.append('[tag.done]done[/]')
-        if st is last:
-            tags.append('[tag.last]last used[/]')
+    for st, label in zip(steps.order, labels):
         mark = '[bold]>[/]' if st is default else ' '
-        line = f'{mark} {label:<{58 if sub else 60}} {" ".join(tags)}'
+        line = f'{mark} {label}'
         if st is last:
             line = f'[reverse]{line}[/]'
         elif st is default:

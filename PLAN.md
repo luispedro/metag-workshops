@@ -24,7 +24,10 @@ cleanup --failed-only` and restart. The full-data results in
 **`metag-ws` is implemented** (steps 1–15; step 13, GTDB-Tk, results only;
 steps 14–15, MetaBAT2 and Galah, added 2026-11-16).
 Checked by hand: `results-for` and the choice of input folders, the menu and
-state, step 12's MAG. End-to-end test (`data-prep/tests/run_all_sim.sh`, 16
+state, step 12's MAG. Arrow-key menu (2026-11-16) checked in a pseudo-terminal
+(moving, scrolling in a 12-line terminal, typed steps, quit/Esc/Ctrl-C, the
+plain fallback); still to try in real terminals (VS Code, Jupyter, PuTTY,
+tmux) and on resizing. End-to-end test (`data-prep/tests/run_all_sim.sh`, 16
 threads): all 12 steps PASS, 21.0 min (GUNC 349 s, eggNOG-mapper 345 s).
 Precomputed run on the workshop dataset (`run_precomputed.sh`, job
 28124971): steps 1–12 PASS, 26.7 min (vs 24.8 min with `pipeline.sh`), 31
@@ -130,10 +133,17 @@ Still open, against GOALS:
    06_MAPPING/polished`) instead of next to the assembly; no `bash -c` or
    `/usr/bin/time` wrappers; step 11 does not write `all_bins.faa` (nothing
    uses it).
-2. **Menu.** A plain numbered prompt (no full-screen TUI), so it works in any
-   SSH terminal and in Jupyter/VS Code terminals. The last step used (by any
-   subcommand) is highlighted and the **next** one is the default. With a
-   step on the command line there is no menu (for instructors, scripting).
+2. **Menu.** Inline, not a full-screen TUI, so it works in any SSH terminal
+   and in Jupyter/VS Code terminals: arrow keys (or j/k, PgUp/PgDn,
+   Home/End) and Enter, or type a step number (the cursor follows it). It is
+   never taller than the terminal (it scrolls; projector fonts make
+   terminals short) and is erased once a step is chosen, so the output is
+   the same as with the step on the command line. The cursor starts on the
+   step **after** the last one used (by any subcommand), which is tagged
+   `last used`. Without a terminal (stdin or stdout redirected, `TERM=dumb`)
+   or with `METAG_WS_MENU=plain` it falls back to a typed prompt (Enter =
+   that same next step). With a step on the command line there is no menu
+   (for instructors, scripting).
 3. **`results-for N` brings in all steps up to N**, not only N: assemblies,
    contig names and bins differ between runs, so mixing them breaks things
    (e.g., a precomputed BAM with the participant's own polished assembly).
@@ -173,8 +183,8 @@ Still open, against GOALS:
   after `results-for 5.1`.
 * **Tests**: the commands in `steps.toml` match the validated ones in
   `pipeline.sh`; `results-for` each step in a fresh directory, and `show-cmd`
-  then picks the right input folders; the state file (highlight, default =
-  next step).
+  then picks the right input folders; the state file (`last used`, menu starts
+  on the next step).
 
 ## The AWS machine
 
