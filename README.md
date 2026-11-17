@@ -42,7 +42,10 @@ pixi run metag-ws --help
 ```
 
 The databases (SingleM metapackage, CheckM2, GUNC, eggNOG-mapper, GTDB-Tk) are not part
-of the installation; their paths are set in `pixi.toml` (`[activation.env]`).
+of the installation. `pixi run download-dbs DEST` downloads them (≈ 84 GB, ≈ 165 GB
+unpacked) and `export METAG_WS_DB=DEST` points the environment at them; see
+[`setup/README.md`](setup/README.md), which is also the guide to setting up the
+workshop machine.
 
 ## Building the notes
 

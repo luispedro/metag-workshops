@@ -62,10 +62,12 @@ Not done yet:
 * **15-minute target**: 24.8 min is above it (below the 30 min hard limit).
   The remaining cost is mostly fixed (GUNC 5.3 min, eggNOG-mapper 4.0 min,
   DB loading); `results-for` lets participants skip a slow step.
-* **CheckM2 database**: the shared DB is the 2021 version; CheckM2 1.1.0
-  recommends DB v3 (doi:10.5281/zenodo.14897628). Install it for the AWS
-  machine and rerun the reference run with it.
-* **The AWS machine** (below): not built.
+* **CheckM2 database**: aqua's shared DB is the 2021 version; CheckM2 1.1.0
+  recommends DB v3 (doi:10.5281/zenodo.14897628), which `pixi run
+  download-dbs` installs. Rerun the precomputed results with the downloaded
+  databases (`METAG_WS_DB=...`), so that they match the workshop machine.
+* **The AWS machine** (below): not built; the database download and the
+  setup guide are done (setup/README.md).
 
 ## Checked against GOALS.md (2026-11-16)
 
@@ -101,8 +103,11 @@ Still open, against GOALS:
   at" are there; the background in the notes is still TODO.
 * **Public data** (step 1): still copied from `$METAG_WS_DATA`; to download
   from a public record (e.g., Zenodo, citing the original study) instead.
-* **AWS machine** ("Workshop support data & tools"): not built; database
-  paths in `pixi.toml` are still those of aqua.
+* **AWS machine** ("Workshop support data & tools"): not built. The
+  databases can be downloaded from their public sources (`pixi run
+  download-dbs`), and the environment finds them through `$METAG_WS_DB` or
+  `/opt/metag-ws/db` (setup/activate_databases.sh); setup/README.md is the
+  step-by-step guide.
 
 ## `metag-ws`: design decisions
 
@@ -200,16 +205,18 @@ read-only paths (e.g., `/opt/metag-ws/{data,precomputed,db}`, the defaults of
    the same time (they will not all do so, and `results-for` lets slow
    participants skip ahead). Time a few simultaneous runs on the chosen
    instance type and update data-prep/TIMING.md.
-2. **Databases** on fast local disk (≈ 77 GB: eggNOG 51 GB, GUNC 13.5 GB,
-   SingleM 9.7 GB, CheckM2 3.1 GB; more with CheckM2 DB v3). On a shared
-   machine they stay in the page cache once the first user has read them, if
-   there is enough RAM: plan RAM for the databases (≈ 36 GB of DIAMOND/SingleM
-   files actually read) plus the users' jobs. Make the database paths in
-   `pixi.toml` configurable instead of the aqua paths, and add a setup script
-   that downloads them (`singlem data`, `checkm2 database --download`,
-   `gunc download_db`, `download_eggnog_data.py`). The GTDB-Tk data (step 13)
-   are not needed there.
-3. **Software**: one shared `pixi install --frozen --all`, and `metag-ws` and
+2. **Databases** on fast local disk (≈ 165 GB: GTDB-Tk 88 GB, eggNOG 51 GB,
+   GUNC 13.5 GB, SingleM 9.7 GB, CheckM2 ≈ 3 GB). On a shared machine they
+   stay in the page cache once the first user has read them, if there is
+   enough RAM: plan RAM for the databases (≈ 36 GB of DIAMOND/SingleM files
+   actually read) plus the users' jobs. **Done**: `pixi run download-dbs`
+   (setup/download_databases.sh) downloads pinned versions from the public
+   sources (not with the tools' downloaders: `singlem data` takes the newest
+   metapackage, and `download_eggnog_data.py` points to a host that no longer
+   exists). GTDB-Tk is included for completeness, although step 13 is not run
+   there.
+3. **Software**: one shared `pixi install --frozen` (all environments but
+   docs), and `metag-ws` and
    the tools on every user's `PATH` (e.g., activation in `/etc/profile.d/`).
 4. **Users**: one account per participant (created from a list); home
    directories need ≈ 5 GB each for a full own run (nothing extra for

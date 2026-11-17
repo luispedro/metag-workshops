@@ -5,14 +5,11 @@ name = "metag-workshops"
 platforms = ["linux-64"]
 version = "0.1.0"
 
-# Databases are pre-installed on aqua (see PLAN.md). Downloading them is not
-# part of the workshop.
-[activation.env]
-SINGLEM_METAPACKAGE_PATH = "/work/microbiome/db/singlem/S6.5.0.GTDB_r232.metapackage_20260319.smpkg.zb/payload_directory"
-CHECKM2DB = "/work/microbiome/db/CheckM2_database/uniref100.KO.1.dmnd"
-GUNC_DB = "/work/microbiome/db/gunc/1.0.1/gunc_db_2.0.4.dmnd"
-EGGNOG_DATA_DIR = "/work/microbiome/db/eggnog-mapper/2.1.12"
-GTDBTK_DATA_PATH = "/work/microbiome/db/gtdb/gtdb_release232/auxillary_files/gtdbtk_package/full_package/release232"
+# Database paths ($CHECKM2DB, ...): set by setup/activate_databases.sh, from
+# $METAG_WS_DB, /opt/metag-ws/db (the workshop machine) or aqua's databases.
+# To download them: pixi run download-dbs [DEST [DB...]] (setup/README.md).
+[activation]
+scripts = ["setup/activate_databases.sh"]
 
 [tasks]
 # Building the workshop dataset (data-prep/): jug_hpc (data-prep/jug_hpc.toml)
@@ -77,8 +74,19 @@ gtdbtk = ">=2.8.0,<3"
 metabat2 = ">=2.18,<3"
 
 # also here, as the environment does not include the default feature
-[feature.gtdbtk.activation.env]
-GTDBTK_DATA_PATH = "/work/microbiome/db/gtdb/gtdb_release232/auxillary_files/gtdbtk_package/full_package/release232"
+[feature.gtdbtk.activation]
+scripts = ["setup/activate_databases.sh"]
+
+# Downloading the databases from their public sources (setup/README.md):
+#   pixi run download-dbs [DEST [DB...]]     (default: /opt/metag-ws/db, all)
+# aria2c downloads over several connections (Zenodo throttles each one).
+[feature.setup.dependencies]
+aria2 = ">=1.37.0,<2"
+pigz = ">=2.8,<3"
+curl = ">=8.17.0,<9"
+
+[feature.setup.tasks]
+download-dbs = "bash setup/download_databases.sh"
 
 # Building the workshop materials (materials/): pandoc turns the one markdown
 # source into the slides and the handouts. Not needed on the workshop machine.
@@ -114,3 +122,4 @@ eggnog = { features = ["eggnog"], no-default-feature = true }
 gtdbtk = { features = ["gtdbtk"], no-default-feature = true }
 metabat2 = { features = ["metabat2"], no-default-feature = true }
 docs = { features = ["docs"], no-default-feature = true }
+setup = { features = ["setup"], no-default-feature = true }

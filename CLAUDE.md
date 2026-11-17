@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 Material for a hands-on metagenomics workshop (ONT long reads + Illumina short
-reads, one urban soil sample). Three parts that must stay consistent:
+reads, one urban soil sample). Four parts that must stay consistent:
 
 - `materials/metagenomics-workshop.md`: the single markdown source for the
   reveal.js deck and the student/instructor handouts (pandoc).
@@ -13,6 +13,12 @@ reads, one urban soil sample). Three parts that must stay consistent:
   (`show-cmd`, `explain-cmd`, `results-for`, plus hidden `_run-all`).
 - `data-prep/`: how the reduced dataset and the precomputed results were built
   (Jug task graph submitted with jug_hpc; not needed to run the workshop).
+- `setup/`: setting up the workshop machine (`README.md`), the database
+  download (`download_databases.sh`, `pixi run download-dbs [DEST [DB...]]`,
+  in its own `setup` environment)
+  and `activate_databases.sh`, a pixi activation script that sets the
+  database variables from `$METAG_WS_DB`, else `/opt/metag-ws/db` if it
+  exists, else aqua's paths.
 
 `GOALS.md` states what the workshop should cover; `PLAN.md` is the design and
 current status (read it before changing `metag-ws` behaviour; update its
@@ -23,8 +29,8 @@ status when finishing work it lists).
 All software comes from pixi (`pixi install --all`). Environments: default
 (bioinformatics tools + `metag-ws`, editable), `eggnog`, `gtdbtk` and
 `metabat2` (each separate because of dependency conflicts; used as `pixi run
--e eggnog emapper.py ...`), and `docs` (pandoc, tectonic, graphviz,
-matplotlib).
+-e eggnog emapper.py ...`), `docs` (pandoc, tectonic, graphviz,
+matplotlib), and `setup` (aria2, pigz, curl: `pixi run download-dbs`).
 
 ```bash
 pixi run -e docs materials           # deck + handouts into materials/build/
@@ -43,8 +49,10 @@ then `site` on every push to `main`, with only the `docs` environment.
 There is no unit test suite (only `test-menu`, for the interactive menu;
 `pixi run test-menu --show ROWS COLS KEY...` prints the screen). End-to-end tests run on the HPC queue
 (`data-prep/tests/run_all_sim.sh`, `pixi run submit-test`); databases are at
-`/work/microbiome/db/...` (paths in `pixi.toml` `[activation.env]`), so real
-tool runs only work on that cluster.
+`/work/microbiome/db/...` (paths in `setup/activate_databases.sh`), so real
+tool runs only work on that cluster unless the databases were downloaded.
+In the mqyolo sandbox the pixi environments are read-only: use `pixi run
+--as-is`.
 
 ## Architecture
 
