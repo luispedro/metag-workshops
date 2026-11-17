@@ -3,7 +3,7 @@
 Every command that `metag-ws show-cmd` prints for a participant who has run all
 the steps themselves (no `results-for`), with 8 threads, must appear verbatim
 as a ```bash block in metagenomics-workshop.md (or a ```{.bash .no-cue} one, for
-a command shown but not run: step 13). Run in the default pixi
+a command shown but not run: step 10). Run in the default pixi
 environment (it imports metag_ws):
 
     pixi run check-commands

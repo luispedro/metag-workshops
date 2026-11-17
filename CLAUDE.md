@@ -64,7 +64,7 @@ per-argument `explain`), `outputs`, and `look_at`. Placeholders: `{2.1}` is the
 folder holding step 2.1's outputs (own `02_QC` or `02_QC_precomputed` after
 `results-for`), `{threads}`, `{threads_fastp}`, `{data}`. Shell variables are
 written `$NAME`, not `${NAME}`. `results_only = true` marks steps shown but not
-run (step 13, GTDB-Tk, ~130 GB RAM).
+run (step 10, GTDB-Tk, ~130 GB RAM).
 
 To change a command: edit `steps.toml`, then the matching ```` ```bash ````
 block in the notes, then `pixi run check-commands`. `materials/check_commands.py`

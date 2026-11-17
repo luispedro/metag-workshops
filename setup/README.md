@@ -36,7 +36,7 @@ data` takes the newest metapackage in the Zenodo series, which is not
 necessarily the one the installed SingleM expects. `download_eggnog_data.py`
 uses `eggnogdb.embl.de`, which no longer resolves.
 
-Only step 13 (GTDB-Tk) uses the GTDB-Tk data, and step 13 is results-only:
+Only step 10 (GTDB-Tk) uses the GTDB-Tk data, and step 10 is results-only:
 participants never run it. It is included so that the installation is
 complete (e.g., to rerun the precomputed results on the machine).
 
@@ -79,7 +79,7 @@ rsync -avP \
   data-prep/precomputed/ WS:/opt/metag-ws/precomputed/
 ```
 
-(`-a`, not `-L`: `13_GTDBTK` contains a relative symlink.)
+(`-a`, not `-L`: `10_GTDBTK` contains a relative symlink.)
 
 Back on the workshop machine:
 
@@ -98,7 +98,7 @@ sudo chmod -R a+rX,go-w /opt/metag-ws
 sudo useradd -m testuser && sudo -iu testuser
 for v in SINGLEM_METAPACKAGE_PATH CHECKM2DB GUNC_DB EGGNOG_DATA_DIR GTDBTK_DATA_PATH; do ls -d "${!v}"; done
 metag-ws show-cmd 1
-metag-ws results-for 12 && ls -l ~/workshop        # *_precomputed symlinks
+metag-ws results-for 13 && ls -l ~/workshop        # *_precomputed symlinks
 pixi run -e eggnog emapper.py --version            # the eggnog environment, read-only
 metag-ws _run-all -o ~/test-run --skip-results-only -t 16   # ≈ 25 min; also a timing test
 ```

@@ -21,10 +21,13 @@ after changing a script; on failure read `data-prep/logs/jug/`, `pixi run jug
 cleanup --failed-only` and restart. The full-data results in
 `data-prep/runs/full/` are reused.
 
-**`metag-ws` is implemented** (steps 1–15; step 13, GTDB-Tk, results only;
-steps 14–15, MetaBAT2 and Galah, added 2026-11-16).
+**`metag-ws` is implemented** (steps 1–15; step 10, GTDB-Tk, results only;
+steps 14–15, MetaBAT2 and Galah, added 2026-11-16). On 2026-11-18,
+GTDB-Tk moved from step 13 to step 10, right after GUNC (SingleM appraise,
+genes and eggNOG-mapper became 11–13; the precomputed folders were renamed to
+match). The runs below are from before, with the old numbers.
 Checked by hand: `results-for` and the choice of input folders, the menu and
-state, step 12's MAG. Arrow-key menu (2026-11-16) checked in a pseudo-terminal (`pixi run test-menu`)
+state, the MAG of eggNOG-mapper's step. Arrow-key menu (2026-11-16) checked in a pseudo-terminal (`pixi run test-menu`)
 (moving, scrolling in a 12-line terminal, typed steps, quit/Esc/Ctrl-C, the
 plain fallback); still to try in real terminals (VS Code, Jupyter, PuTTY,
 tmux) and on resizing. End-to-end test (`data-prep/tests/run_all_sim.sh`, 16
@@ -78,11 +81,11 @@ participant's own).
 
 Where we differ from GOALS, on purpose:
 
-* **Step 12 annotates one bin** (`BIN_NAME`, the best by CheckM2), not all of
+* **Step 13 annotates one bin** (`BIN_NAME`, the best by CheckM2), not all of
   them: all bins take ~15 min. GOALS asks that participants "find a function
   of interest across bins"; the notes only search one bin so far (open
   below).
-* **Step 13, GTDB-Tk** (taxonomy of the bins), was not in GOALS at first. It
+* **Step 10, GTDB-Tk** (taxonomy of the bins), was not in GOALS at first. It
   is the standard bin taxonomy, so it is shown, but results only. Its
   database is not needed on the workshop machine.
 * **Steps 14–15** (a second binner, MetaBAT2, with CheckM2 on its bins; and
@@ -126,17 +129,17 @@ Still open, against GOALS:
    | 7 | Binning | `bin` |
    | 8 | CheckM2 | `checkm2` |
    | 9 | GUNC | `gunc` |
-   | 10 | SingleM appraise | `appraise` |
-   | 11 | Gene prediction (pyrodigal) | `genes` |
-   | 12 | eggNOG-mapper | `eggnog` |
-   | 13 | GTDB-Tk (results only) | — |
+   | 10 | GTDB-Tk (results only) | — |
+   | 11 | SingleM appraise | `appraise` |
+   | 12 | Gene prediction (pyrodigal) | `genes` |
+   | 13 | eggNOG-mapper | `eggnog` |
    | 14.1 / 14.2 | MetaBAT2 / CheckM2 on its bins | — |
    | 15 | Galah | — |
 
    Differences: each step writes only into its own folder, so `bwa index`
    writes into the step's folder (`-p 05_POLISH/draft`, `-p
    06_MAPPING/polished`) instead of next to the assembly; no `bash -c` or
-   `/usr/bin/time` wrappers; step 11 does not write `all_bins.faa` (nothing
+   `/usr/bin/time` wrappers; step 12 does not write `all_bins.faa` (nothing
    uses it).
 2. **Menu.** Inline, not a full-screen TUI, so it works in any SSH terminal
    and in Jupyter/VS Code terminals: arrow keys (or j/k, PgUp/PgDn,
@@ -159,18 +162,18 @@ Still open, against GOALS:
    keeps each chain consistent. Consequence: after `results-for`, commands
    copied from a printed handout no longer work as they are; participants
    should use `show-cmd`.
-4. **Step 12 picks its bin with a shell variable**: `BIN_NAME` is set by an
+4. **Step 13 picks its bin with a shell variable**: `BIN_NAME` is set by an
    `awk` one-liner to the best bin (completeness − 5 × contamination) in the
-   CheckM2 report step 12 reads (own or precomputed), so the command works
+   CheckM2 report step 13 reads (own or precomputed), so the command works
    with no editing although bins are named differently in each run;
    participants can set `BIN_NAME` themselves to annotate another bin.
    eggNOG-mapper's own environment is shown, not hidden (a chance to show
    `pixi run -e`); it works from `~/workshop` because pixi finds the project
    through `$PIXI_PROJECT_MANIFEST`. On the AWS machine, check that it works
    with the shared, read-only installation (otherwise add `--as-is`).
-5. **Results-only steps**: `results-for 13` links all precomputed folders
-   (for comparison) without changing `precomputed_upto`, so the other steps
-   keep their inputs. Nothing reads its outputs (steps 14 and 15 do not).
+5. **Results-only steps**: `results-for 10` links the precomputed folders
+   of steps 1–10 (for comparison) without changing `precomputed_upto`, so the
+   other steps keep their inputs. No later step reads its outputs.
    `_run-all` runs it (for the precomputed results); `--skip-results-only`
    skips it.
 6. **`_run-all`** (hidden): records finished steps (`DIR/.done/`) so a killed
@@ -213,7 +216,7 @@ read-only paths (e.g., `/opt/metag-ws/{data,precomputed,db}`, the defaults of
    (setup/download_databases.sh) downloads pinned versions from the public
    sources (not with the tools' downloaders: `singlem data` takes the newest
    metapackage, and `download_eggnog_data.py` points to a host that no longer
-   exists). GTDB-Tk is included for completeness, although step 13 is not run
+   exists). GTDB-Tk is included for completeness, although step 10 is not run
    there.
 3. **Software**: one shared `pixi install --frozen` (all environments but
    docs), and `metag-ws` and

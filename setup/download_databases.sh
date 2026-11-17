@@ -2,11 +2,11 @@
 # Downloads the databases of the workshop from their public sources into DEST
 # (setup/README.md), in the layout that setup/activate_databases.sh expects:
 #
-#   DEST/singlem/S6.5.0.GTDB_r232.metapackage_20260319.smpkg.zb/   9.7 GB  steps 3, 10
+#   DEST/singlem/S6.5.0.GTDB_r232.metapackage_20260319.smpkg.zb/   9.7 GB  steps 3, 11
 #   DEST/checkm2/uniref100.KO.1.dmnd                         about 3 GB  steps 8, 14.2
 #   DEST/gunc/gunc_db_progenomes2.1.dmnd                      13.5 GB  step 9
-#   DEST/eggnog/5.0.2/                                          51 GB  step 12
-#   DEST/gtdbtk/release232/                                     88 GB  step 13
+#   DEST/eggnog/5.0.2/                                          51 GB  step 13
+#   DEST/gtdbtk/release232/                                     88 GB  step 10
 #
 # Usage: setup/download_databases.sh [DEST [DB...]]
 #   DEST  default: $METAG_WS_DB, or /opt/metag-ws/db

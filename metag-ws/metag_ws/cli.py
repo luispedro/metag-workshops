@@ -728,7 +728,7 @@ def run_all(argv):
     p.add_argument('-t', '--threads', type=int, default=cfg['threads'])
     p.add_argument('--until', metavar='STEP', help='stop after this step')
     p.add_argument('--skip-results-only', action='store_true',
-                   help='do not run the results-only steps (step 13, GTDB-Tk, needs ~130 GB of RAM)')
+                   help='do not run the results-only steps (step 10, GTDB-Tk, needs ~130 GB of RAM)')
     args = p.parse_args(argv)
     for v in DB_VARS:
         if not os.environ.get(v):

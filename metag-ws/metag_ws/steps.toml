@@ -18,7 +18,7 @@
 # `results_only`: a step that is too slow or too large for the workshop
 # machine. Its commands are shown, but participants look at the precomputed
 # results instead; the text says why. In its `look_at`, the placeholders are
-# the precomputed folders (e.g., {13} is 13_GTDBTK_precomputed).
+# the precomputed folders (e.g., {10} is 10_GTDBTK_precomputed).
 #
 # `outputs`: files (relative to the step's folder; globs allowed) that a
 # finished step leaves behind; used to check that inputs exist.
@@ -131,7 +131,7 @@ singlem pipe \\
 explain = [
     ["singlem pipe", "finds the reads that cover a set of single-copy marker genes (present once in nearly every bacterial and archaeal genome) and classifies them against GTDB. Because it does not depend on assembly, it also sees organisms that are too rare to assemble. The reference data (metapackage) is found through $SINGLEM_METAPACKAGE_PATH, set for you"],
     ["-1, -2", "input: the quality-controlled paired reads from step 2.1"],
-    ["--otu-table", "for each marker gene, the distinct sequences found (\"OTUs\", a short window of the gene), how many reads have each, and its taxonomy. Used again in step 10"],
+    ["--otu-table", "for each marker gene, the distinct sequences found (\"OTUs\", a short window of the gene), how many reads have each, and its taxonomy. Used again in step 11"],
     ["-p", "the taxonomic profile: estimated coverage of each taxon, combining all marker genes"],
     ["--taxonomic-profile-krona", "the same profile as an interactive Krona chart (HTML)"],
     ["--threads", "number of threads"],
@@ -159,7 +159,7 @@ singlem pipe \\
 explain = [
     ["singlem pipe", "the same profiling as for the short reads (step 3.1), now on the long reads"],
     ["-1", "input: the quality-controlled long reads from step 2.2 (single-end, so there is no -2)"],
-    ["--otu-table", "marker gene sequences found, with counts and taxonomy (used again in step 10)"],
+    ["--otu-table", "marker gene sequences found, with counts and taxonomy (used again in step 11)"],
     ["-p", "the taxonomic profile"],
     ["--taxonomic-profile-krona", "the profile as an interactive Krona chart (HTML)"],
     ["--threads", "number of threads"],
@@ -390,22 +390,64 @@ explain = [
 
 [[step]]
 id = "10"
-folder = "10_APPRAISE"
-title = "What did the bins capture? (SingleM appraise)"
-outputs = ["bins.otu.tsv", "appraise_sr.txt", "appraise_lr.txt"]
+folder = "10_GTDBTK"
+title = "Taxonomy of the bins (GTDB-Tk; results only)"
+results_only = """
+GTDB-Tk needs about 130 GB of memory (to place the bins in the GTDB tree of
+bacteria) and takes about 40 minutes with 16 threads: more than the workshop
+machine can give each of us, so we do not run it here. Look at the command
+(metag-ws explain-cmd 10) and at our results: metag-ws results-for 10 brings
+them in as 10_GTDBTK_precomputed (it does not change which inputs the commands
+of the other steps use)."""
+outputs = ["gtdbtk.*.summary.tsv"]
 look_at = """
-{10}/appraise_sr.txt: percent_binned is the fraction of the marker-gene
-coverage in the reads that is in the bins. {10}/appraise_sr.unaccounted.tsv
-lists what is in the reads but not in any bin: which taxa are missing, and
-why (abundance)? Compare with the long reads (appraise_lr.*)."""
+{10}/gtdbtk.bac120.summary.tsv (archaea, if any, are in
+gtdbtk.ar53.summary.tsv): one line per bin, with its classification (domain
+to species), the closest reference genome and its ANI, and how the
+classification was made (classification_method):
+cut -f1,2,6,14 {10}/gtdbtk.bac120.summary.tsv | column -t -s$'\\t'
+Which bins have a species (s__ followed by a name)? Those without one may be
+new species. Bins with too few marker genes are "Unclassified": how
+complete are they ({8}/quality_report.tsv)?"""
 
 [[step.cmd]]
 run = """
 mkdir -p {10}
+pixi run -e gtdbtk gtdbtk classify_wf \\
+    --genome_dir {7}/output_bins -x fa \\
+    --out_dir {10} \\
+    --cpus {threads}"""
+explain = [
+    ["pixi run -e gtdbtk", "GTDB-Tk is in its own pixi environment, gtdbtk, as it needs older versions of some packages than the other tools, and one environment cannot have both. `pixi run -e gtdbtk` runs a command in that environment (all the other tools are in the default one, which is already active). eggNOG-mapper (step 13) and MetaBAT2 (step 14) are run in the same way"],
+    ["gtdbtk classify_wf", "classifies each bin in the GTDB taxonomy. It finds 120 bacterial (or 53 archaeal) marker genes in the bin and first compares the bin (ANI, with skani) with the GTDB species representatives: a bin within a species' ANI radius (usually 95%) gets that species. The others are placed in the GTDB tree with the aligned marker genes (pplacer), and get the taxonomy of where they land, using relative evolutionary divergence (RED) to decide the rank. The reference data (GTDB release 232) are found through $GTDBTK_DATA_PATH, set for you"],
+    ["--genome_dir", "input: the folder with the bins"],
+    ["-x fa", "the file extension of the bins"],
+    ["--out_dir", "output folder; the classifications are in gtdbtk.bac120.summary.tsv (bacteria) and gtdbtk.ar53.summary.tsv (archaea)"],
+    ["--cpus", "number of threads"],
+]
+
+
+[[step]]
+id = "11"
+folder = "11_APPRAISE"
+title = "What did the bins capture? (SingleM appraise)"
+outputs = ["bins.otu.tsv", "appraise_sr.txt", "appraise_lr.txt"]
+look_at = """
+{11}/appraise_sr.txt: percent_binned is the fraction of the marker-gene
+coverage in the reads that is in the bins. {11}/appraise_sr.unaccounted.tsv
+lists what is in the reads but not in any bin: which taxa are missing, and
+why (abundance)? Compare with the long reads (appraise_lr.*).
+{11}/bins.profile.tsv is SingleM's classification of each bin, from its
+marker genes: does it agree with GTDB-Tk's (step 10, in
+10_GTDBTK_precomputed after metag-ws results-for 10)?"""
+
+[[step.cmd]]
+run = """
+mkdir -p {11}
 singlem pipe \\
     --genome-fasta-files {7}/output_bins/*.fa \\
-    --otu-table {10}/bins.otu.tsv \\
-    -p {10}/bins.profile.tsv \\
+    --otu-table {11}/bins.otu.tsv \\
+    -p {11}/bins.profile.tsv \\
     --threads {threads}"""
 explain = [
     ["singlem pipe", "the same marker gene search as in step 3, now on the bins"],
@@ -419,14 +461,14 @@ explain = [
 run = """
 singlem appraise \\
     --metagenome-otu-tables {3.1}/sr.otu.tsv \\
-    --genome-otu-tables {10}/bins.otu.tsv \\
-    --output-unaccounted-for-otu-table {10}/appraise_sr.unaccounted.tsv \\
-    > {10}/appraise_sr.txt
+    --genome-otu-tables {11}/bins.otu.tsv \\
+    --output-unaccounted-for-otu-table {11}/appraise_sr.unaccounted.tsv \\
+    > {11}/appraise_sr.txt
 singlem appraise \\
     --metagenome-otu-tables {3.2}/lr.otu.tsv \\
-    --genome-otu-tables {10}/bins.otu.tsv \\
-    --output-unaccounted-for-otu-table {10}/appraise_lr.unaccounted.tsv \\
-    > {10}/appraise_lr.txt"""
+    --genome-otu-tables {11}/bins.otu.tsv \\
+    --output-unaccounted-for-otu-table {11}/appraise_lr.unaccounted.tsv \\
+    > {11}/appraise_lr.txt"""
 explain = [
     ["singlem appraise", "compares the marker gene sequences in the reads with those in the bins: how much of the community (as seen in the reads) did binning recover?"],
     ["--metagenome-otu-tables", "what is in the reads (from step 3): once for the short reads, once for the long reads"],
@@ -437,21 +479,21 @@ explain = [
 
 
 [[step]]
-id = "11"
-folder = "11_GENES"
+id = "12"
+folder = "12_GENES"
 title = "Gene prediction (pyrodigal)"
 outputs = ["*.faa"]
 look_at = """
-For each bin: {11}/BIN.faa (proteins), BIN.fna (genes, DNA) and BIN.gff
-(coordinates). How many genes per bin? grep -c '>' {11}/*.faa
+For each bin: {12}/BIN.faa (proteins), BIN.fna (genes, DNA) and BIN.gff
+(coordinates). How many genes per bin? grep -c '>' {12}/*.faa
 Do larger bins have more genes? About how many genes per Mbp?"""
 
 [[step.cmd]]
 run = """
-mkdir -p {11}
+mkdir -p {12}
 for fa in {7}/output_bins/*.fa; do
     b=$(basename $fa .fa)
-    pyrodigal -i $fa -a {11}/$b.faa -d {11}/$b.fna -o {11}/$b.gff
+    pyrodigal -i $fa -a {12}/$b.faa -d {12}/$b.fna -o {12}/$b.gff
 done"""
 explain = [
     ["for fa in ...; do ... done", "a shell loop: runs the commands inside once for each bin, with $fa set to the bin's file"],
@@ -465,15 +507,15 @@ explain = [
 
 
 [[step]]
-id = "12"
-folder = "12_EGGNOG"
+id = "13"
+folder = "13_EGGNOG"
 title = "Functional annotation (eggNOG-mapper)"
 outputs = ["*.emapper.annotations"]
 look_at = """
-{12}/$BIN_NAME.emapper.annotations: one line per protein with its best match,
+{13}/$BIN_NAME.emapper.annotations: one line per protein with its best match,
 description, gene name (Preferred_name), COG category, KEGG orthologs and
 pathways, CAZy families, ... Look for a function, e.g.:
-grep -i nitrogenase {12}/$BIN_NAME.emapper.annotations | cut -f1,8,9
+grep -i nitrogenase {13}/$BIN_NAME.emapper.annotations | cut -f1,8,9
 How many proteins have an annotation? Which COG categories are most common?"""
 
 [[step.cmd]]
@@ -481,67 +523,26 @@ run = """
 BIN_NAME=$(awk -F'\\t' 'NR > 1 { print $2 - 5 * $3, $1 }' {8}/quality_report.tsv \\
     | sort -gr | head -n 1 | cut -d' ' -f2)
 echo $BIN_NAME
-mkdir -p {12}
+mkdir -p {13}
 pixi run -e eggnog emapper.py \\
-    -i {11}/$BIN_NAME.faa --itype proteins \\
+    -i {12}/$BIN_NAME.faa --itype proteins \\
     -m diamond \\
     --data_dir $EGGNOG_DATA_DIR \\
-    -o $BIN_NAME --output_dir {12} \\
-    --temp_dir {12} \\
+    -o $BIN_NAME --output_dir {13} \\
+    --temp_dir {13} \\
     --cpu {threads} --override"""
 explain = [
     ["pixi run -e eggnog", "eggNOG-mapper is installed in its own pixi environment, eggnog: it needs an older version of DIAMOND than GUNC, and one environment cannot have both. `pixi run -e eggnog` runs a command in that environment (all the other tools are in the default one, which is already active). pixi finds the workshop project through $PIXI_PROJECT_MANIFEST, set when the environment is activated, so this works from any folder"],
     ["emapper.py", "eggNOG-mapper: annotates proteins by finding their closest match among the eggNOG orthologous groups and transferring that group's functional annotation (names, GO terms, KEGG, CAZy, ...)"],
     ["BIN_NAME=$(...)", "we annotate a single bin: annotating all bins takes ~15 minutes. This sets the shell variable BIN_NAME to the best bin in the CheckM2 report ({8}/quality_report.tsv), by completeness - 5 x contamination: awk computes the score of each bin, sort -gr puts the highest first, and head/cut keep its name. To annotate another bin, set the variable yourself instead (e.g., BIN_NAME=SemiBin_2). If you open a new terminal, set it again before looking at the annotations"],
     ["$BIN_NAME", "the value of the variable: the name of the bin"],
-    ["-i ... --itype proteins", "input: the proteins of the bin (step 11)"],
+    ["-i ... --itype proteins", "input: the proteins of the bin (step 12)"],
     ["-m diamond", "search with DIAMOND (fast protein alignment) against the eggNOG proteins"],
     ["--data_dir $EGGNOG_DATA_DIR", "the eggNOG database, already installed"],
     ["-o, --output_dir", "name prefix and folder of the output files"],
     ["--temp_dir", "where to put temporary files (by default, the current folder)"],
     ["--cpu", "number of threads"],
     ["--override", "overwrite existing outputs (e.g., when you run the command again)"],
-]
-
-
-[[step]]
-id = "13"
-folder = "13_GTDBTK"
-title = "Taxonomy of the bins (GTDB-Tk; results only)"
-results_only = """
-GTDB-Tk needs about 130 GB of memory (to place the bins in the GTDB tree of
-bacteria) and takes about 40 minutes with 16 threads: more than the workshop
-machine can give each of us, so we do not run it here. Look at the command
-(metag-ws explain-cmd 13) and at our results: metag-ws results-for 13 brings
-them in as 13_GTDBTK_precomputed (it does not change which inputs the commands
-of the other steps use)."""
-outputs = ["gtdbtk.*.summary.tsv"]
-look_at = """
-{13}/gtdbtk.bac120.summary.tsv (archaea, if any, are in
-gtdbtk.ar53.summary.tsv): one line per bin, with its classification (domain
-to species), the closest reference genome and its ANI, and how the
-classification was made (classification_method):
-cut -f1,2,6,14 {13}/gtdbtk.bac120.summary.tsv | column -t -s$'\\t'
-Which bins have a species (s__ followed by a name)? Those without one may be
-new species. Bins with too few marker genes are "Unclassified": how
-complete are they ({8}/quality_report.tsv)?
-Compare with what SingleM said about the same bins in step 10
-({10}/bins.profile.tsv)."""
-
-[[step.cmd]]
-run = """
-mkdir -p {13}
-pixi run -e gtdbtk gtdbtk classify_wf \\
-    --genome_dir {7}/output_bins -x fa \\
-    --out_dir {13} \\
-    --cpus {threads}"""
-explain = [
-    ["pixi run -e gtdbtk", "GTDB-Tk is in its own pixi environment, gtdbtk, as it needs older versions of some packages than the other tools (as for eggNOG-mapper in step 12)"],
-    ["gtdbtk classify_wf", "classifies each bin in the GTDB taxonomy. It finds 120 bacterial (or 53 archaeal) marker genes in the bin and first compares the bin (ANI, with skani) with the GTDB species representatives: a bin within a species' ANI radius (usually 95%) gets that species. The others are placed in the GTDB tree with the aligned marker genes (pplacer), and get the taxonomy of where they land, using relative evolutionary divergence (RED) to decide the rank. The reference data (GTDB release 232) are found through $GTDBTK_DATA_PATH, set for you"],
-    ["--genome_dir", "input: the folder with the bins"],
-    ["-x fa", "the file extension of the bins"],
-    ["--out_dir", "output folder; the classifications are in gtdbtk.bac120.summary.tsv (bacteria) and gtdbtk.ar53.summary.tsv (archaea)"],
-    ["--cpus", "number of threads"],
 ]
 
 
@@ -567,7 +568,7 @@ pixi run -e metabat2 jgi_summarize_bam_contig_depths \\
     --outputDepth {14.1}/depth.txt \\
     {6}/sr.sorted.bam"""
 explain = [
-    ["pixi run -e metabat2", "MetaBAT2 is in its own pixi environment, metabat2, as it needs older versions of some libraries than samtools (as for eggNOG-mapper in step 12)"],
+    ["pixi run -e metabat2", "MetaBAT2 is in its own pixi environment, metabat2, as it needs older versions of some libraries than samtools (as for eggNOG-mapper in step 13)"],
     ["jgi_summarize_bam_contig_depths", "computes the coverage (depth) of each contig from the mapped reads of step 6, in the format MetaBAT2 reads. SemiBin2 computed this itself from the BAM file"],
     ["--outputDepth", "the coverage table: one line per contig, with its length, mean coverage and its variance"],
     ["{6}/sr.sorted.bam", "input: the reads mapped to the polished assembly (step 6)"],
