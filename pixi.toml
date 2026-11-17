@@ -25,6 +25,8 @@ status = { cmd = "jug status jugfile.py", cwd = "data-prep" }
 status-test = { cmd = "jug status --jugdir file_keepalive:tests/jugfile.jugdata jugfile.py", cwd = "data-prep", env = { WS_TEST = "1" } }
 # the commands in the workshop notes match metag-ws (materials/check_commands.py)
 check-commands = "python materials/check_commands.py"
+# the metag-ws menu, driven in a pseudo-terminal (metag-ws/tests/test_menu.py)
+test-menu = "python metag-ws/tests/test_menu.py"
 
 [dependencies]
 fastp = ">=1.4.0,<2"

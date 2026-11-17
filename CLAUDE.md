@@ -31,6 +31,7 @@ pixi run -e docs materials           # deck + handouts into materials/build/
 pixi run -e docs make -C materials slides   # single target: slides, handouts, html, slides-pdf, docx, clean
 pixi run -e docs check-materials     # fail if instructor notes leak into the student handout
 pixi run check-commands              # every metag-ws command appears verbatim in the notes
+pixi run test-menu                   # the metag-ws menu, driven in a pseudo-terminal
 pixi run -e docs site                # GitHub Pages site into materials/build/site/
 pixi run metag-ws show-cmd 5.2       # print a step's command (no menu when a step is given)
 ```
@@ -39,7 +40,8 @@ First docs build needs network (tectonic fetches LaTeX packages, the deck
 fetches reveal.js). CI (`.github/workflows/pages.yml`) runs `check-materials`
 then `site` on every push to `main`, with only the `docs` environment.
 
-There is no unit test suite. End-to-end tests run on the HPC queue
+There is no unit test suite (only `test-menu`, for the interactive menu;
+`pixi run test-menu --show ROWS COLS KEY...` prints the screen). End-to-end tests run on the HPC queue
 (`data-prep/tests/run_all_sim.sh`, `pixi run submit-test`); databases are at
 `/work/microbiome/db/...` (paths in `pixi.toml` `[activation.env]`), so real
 tool runs only work on that cluster.

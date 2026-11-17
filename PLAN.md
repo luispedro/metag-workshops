@@ -24,7 +24,7 @@ cleanup --failed-only` and restart. The full-data results in
 **`metag-ws` is implemented** (steps 1–15; step 13, GTDB-Tk, results only;
 steps 14–15, MetaBAT2 and Galah, added 2026-11-16).
 Checked by hand: `results-for` and the choice of input folders, the menu and
-state, step 12's MAG. Arrow-key menu (2026-11-16) checked in a pseudo-terminal
+state, step 12's MAG. Arrow-key menu (2026-11-16) checked in a pseudo-terminal (`pixi run test-menu`)
 (moving, scrolling in a 12-line terminal, typed steps, quit/Esc/Ctrl-C, the
 plain fallback); still to try in real terminals (VS Code, Jupyter, PuTTY,
 tmux) and on resizing. End-to-end test (`data-prep/tests/run_all_sim.sh`, 16
