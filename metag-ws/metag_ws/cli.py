@@ -5,6 +5,7 @@
     metag-ws results-for [STEP]    bring in the precomputed results up to STEP
     metag-ws get-data              step 1 in one go: copy the reads into 01_DATA/
 
+Without a command, a short overview (commands, examples, progress) is shown.
 Without STEP, a menu of the steps is shown. The steps, their commands and the
 explanations are in steps.toml (next to this file). Results-only steps (too
 large for the workshop machine) show their commands, but participants look at
@@ -39,6 +40,9 @@ from pathlib import Path
 
 from rich.console import Console
 from rich.markup import escape
+from rich.padding import Padding
+from rich.panel import Panel
+from rich.style import Style
 from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
@@ -60,10 +64,14 @@ err = Console(stderr=True, highlight=False, soft_wrap=True)
 
 THEMES = {
     'dark': Theme({'warn': 'yellow', 'error': 'red', 'arg': 'bold cyan',
-                   'tag.precomputed': 'cyan', 'tag.done': 'green', 'tag.last': 'yellow'}),
+                   'tag.precomputed': 'cyan', 'tag.done': 'green', 'tag.last': 'yellow',
+                   'title': 'bold magenta', 'heading': 'bold yellow', 'cmd': 'bold green',
+                   'frame': 'magenta'}),
     'light': Theme({'warn': 'dark_orange3', 'error': 'red3', 'arg': 'bold blue',
                     'tag.precomputed': 'blue', 'tag.done': 'green4', 'tag.last': 'dark_orange3',
-                    'rule.line': 'green4'}),
+                    'rule.line': 'green4',
+                    'title': 'bold dark_magenta', 'heading': 'bold dark_orange3', 'cmd': 'bold green4',
+                    'frame': 'dark_magenta'}),
 }
 SYNTAX_THEME = {'dark': 'ansi_dark', 'light': 'ansi_light'}
 BACKGROUND = 'dark'
@@ -765,6 +773,88 @@ def cmd_get_data(steps, args):
               f'[bold]{escape(pretty(dest))}[/].')
 
 
+# --- without a command: the overview ----------------------------------------------
+
+def step_status(st, ctx):
+    """'done', 'precomputed' or '' for a whole step (all its substeps)."""
+    leaves = st.leaves()
+    if all(done_outputs(leaf, ctx.workdir) for leaf in leaves):
+        return 'done'
+    if (ctx.upto and step_key(leaves[-1].id) <= step_key(ctx.upto)
+            or (ctx.workdir / (st.folder + PRECOMPUTED_SUFFIX)).exists()):
+        return 'precomputed'
+    return ''
+
+
+def cmd_welcome(steps, commands):
+    """What metag-ws does, how to use it, and where the participant is."""
+    def indented(markup):
+        out.print(Padding(Text.from_markup(markup), (0, 0, 0, 2)))
+
+    state = load_state()
+    ctx = context_from_state(state)
+    last = steps.by_id.get(state.get('last', ''))
+    nxt = steps.next_after(last) if last else steps.tops[0]
+    if nxt is last:   # the last step
+        nxt = None
+
+    head = Text.from_markup('[title]metag-ws[/]  [dim]·[/]  helper for the metagenomics workshop\n'
+                            '[dim]The commands of each step, what their arguments mean, '
+                            'and precomputed results to catch up.[/]')
+    out.print(Panel(head, border_style='frame', expand=False, padding=(0, 2)))
+
+    out.print('\n[heading]Commands[/]')
+    table = Table(show_header=False, box=None, padding=(0, 2, 0, 2))
+    table.add_column(no_wrap=True)
+    table.add_column()
+    for name, _, takes_step, help_ in commands:
+        table.add_row(f'[cmd]{name}[/]' + (' [arg]\\[STEP][/]' if takes_step else ''), escape(help_))
+    out.print(table)
+    indented('[dim]Leave out STEP to choose it from a menu. A STEP is a step ([/][arg]5[/][dim]) '
+             'or a substep ([/][arg]5.2[/][dim]).[/]')
+
+    out.print('\n[heading]Examples[/]')
+    ex = Table(show_header=False, box=None, padding=(0, 2, 0, 2))
+    ex.add_column(no_wrap=True)
+    ex.add_column(style='dim')
+    first = steps.leaves[1]   # the first step with a command to run
+    ex.add_row('[cmd]metag-ws get-data[/]', 'start here: the workshop data')
+    ex.add_row(f'[cmd]metag-ws show-cmd[/] [arg]{first.id}[/]', f'the command of step {first.id}, to copy')
+    ex.add_row(f'[cmd]metag-ws explain-cmd[/] [arg]{first.id}[/]', 'the same, with every argument explained')
+    ex.add_row('[cmd]metag-ws results-for[/] [arg]4[/]', 'stuck? catch up with the precomputed results')
+    out.print(ex)
+
+    out.print('\n[heading]Your progress[/]')
+    chips = Text()
+    for st in steps.tops:
+        status = step_status(st, ctx)
+        style = out.get_style({'done': 'tag.done', 'precomputed': 'tag.precomputed'}.get(status, 'dim'))
+        if last is not None and st is last.top:
+            style += Style(reverse=True)
+        chips.append(f' {st.id} ', style=style)
+    out.print(Padding(chips, (0, 0, 0, 1)))
+    indented('[tag.done]■[/] [dim]done[/]   [tag.precomputed]■[/] [dim]precomputed[/]   '
+             '[reverse] n [/] [dim]last used[/]')
+    if nxt:
+        what = 'Start with' if last is None else 'Next'
+        how = 'metag-ws get-data' if nxt.id == '1' else f'metag-ws show-cmd {nxt.id}'
+        indented(f'{what}: step {nxt.id}, {escape(nxt.full_title())}  [dim]→[/] [cmd]{how}[/]')
+    if ctx.upto:
+        indented(f'[dim]The commands use the precomputed results of steps 1 to {ctx.upto} as inputs.[/]')
+
+    d = pretty(ctx.workdir)
+    try:
+        here = Path.cwd().resolve() == ctx.workdir.resolve()
+    except FileNotFoundError:
+        here = False
+    if here:
+        out.print(f'\n[dim]Workshop folder: {escape(d)} (you are in it)[/]')
+    else:
+        how = f'cd {d}' if ctx.workdir.is_dir() else f'mkdir -p {d} && cd {d}'
+        out.print(f'\n[warn]Run the commands in your workshop folder, {escape(d)}:[/] [cmd]{escape(how)}[/]')
+    out.print('[dim]More details: metag-ws COMMAND --help[/]')
+
+
 # --- _run-all -------------------------------------------------------------------
 
 def run_all(argv):
@@ -832,24 +922,31 @@ def main(argv=None):
             prog='metag-ws',
             description='Helper for the metagenomics workshop: the commands of each step, '
                         'what their arguments mean, and precomputed results to catch up.',
-            epilog='Without STEP, a menu of the steps is shown. A STEP can be a step (5) or '
+            epilog='Without COMMAND, an overview is shown. Without STEP, a menu of the steps is shown. A STEP can be a step (5) or '
                    'a substep (5.2). Run the commands in your workshop folder '
                    f'({pretty(config_from_env()["workdir"])}).')
-        sub = p.add_subparsers(dest='command', metavar='COMMAND', required=True)
-        for name, fn, help_ in [
-                ('show-cmd', cmd_show, 'print the command(s) of a step, ready to copy'),
-                ('explain-cmd', cmd_explain, 'print the command(s) of a step, with every argument explained'),
-                ('results-for', cmd_results_for,
-                 'bring in the precomputed results of all steps up to STEP (into *_precomputed folders)')]:
-            sp = sub.add_parser(name, help=help_, description=help_)
-            sp.add_argument('step', nargs='?', metavar='STEP')
+        sub = p.add_subparsers(dest='command', metavar='COMMAND')
+        commands = [
+            ('get-data', cmd_get_data, False,
+             f'step 1 in one go: copy the workshop data into {steps.by_id["1"].folder}/'),
+            ('show-cmd', cmd_show, True, 'print the command(s) of a step, ready to copy'),
+            ('explain-cmd', cmd_explain, True, 'print the command(s) of a step, with every argument explained'),
+            ('results-for', cmd_results_for, True,
+             'bring in the precomputed results of all steps up to STEP (into *_precomputed folders)')]
+        for name, fn, takes_step, help_ in commands:
+            desc = help_
+            if name == 'get-data':
+                desc = help_.replace('workshop data', f'workshop data ({config_from_env()["data"]})')
+            sp = sub.add_parser(name, help=help_, description=desc)
+            if takes_step:
+                sp.add_argument('step', nargs='?', metavar='STEP')
             sp.set_defaults(fn=fn)
-        help_ = (f'step 1 in one go: copy the workshop data ({config_from_env()["data"]}) '
-                 f'into {steps.by_id["1"].folder}/')
-        sub.add_parser('get-data', help=help_, description=help_).set_defaults(fn=cmd_get_data)
         args = p.parse_args(argv)
         setup_colours()
-        args.fn(steps, args)
+        if args.command is None:
+            cmd_welcome(steps, commands)
+        else:
+            args.fn(steps, args)
     except UserError as e:
         err.print(f'[error]metag-ws: {escape(str(e))}[/]')
         return 1

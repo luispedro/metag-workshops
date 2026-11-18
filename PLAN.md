@@ -26,6 +26,9 @@ steps 14–15, MetaBAT2 and Galah, added 2026-11-16). On 2026-11-18,
 GTDB-Tk moved from step 13 to step 10, right after GUNC (SingleM appraise,
 genes and eggNOG-mapper became 11–13; the precomputed folders were renamed to
 match). The runs below are from before, with the old numbers.
+`metag-ws` without a command (2026-11-18) shows an overview: the commands,
+examples, a progress line (steps done/precomputed, the last one used, the
+next one) and whether the participant is in the workshop folder.
 Checked by hand: `results-for` and the choice of input folders, the menu and
 state, the MAG of eggNOG-mapper's step. Arrow-key menu (2026-11-16) checked in a pseudo-terminal (`pixi run test-menu`)
 (moving, scrolling in a 12-line terminal, typed steps, quit/Esc/Ctrl-C, the

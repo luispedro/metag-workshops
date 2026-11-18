@@ -143,10 +143,10 @@ cd ~/workshop
 ```
 
 All the tools are already installed, as are the databases they need. Check
-that it works:
+that it works (this shows what `metag-ws` does and where you are):
 
 ```bash
-metag-ws --help
+metag-ws
 ```
 
 ::: instructor
