@@ -191,12 +191,17 @@ metag-ws explain-cmd
 metag-ws results-for
 ```
 
+```bash
+metag-ws get-data
+```
+
 ::: handout
 - `show-cmd` prints the commands of a step, ready to copy and paste.
 - `explain-cmd` prints the same commands with every argument explained, and
   what to look at in the results.
 - `results-for` brings in our precomputed results, up to the step you choose
   (see the next slide).
+- `get-data` does step 1 for you: it copies the reads into `01_DATA`.
 
 Without a step, each of them shows a menu of the steps: move with the arrow
 keys and press Enter, or type the step number. The menu starts on the step
@@ -288,6 +293,10 @@ cp /opt/metag-ws/data/sample_*.fq.gz 01_DATA/
 
 - Short reads (Illumina, paired-end): `sample_R1.fq.gz`, `sample_R2.fq.gz`
 - Long reads (Oxford Nanopore): `sample_ont.fq.gz`
+
+::: handout
+`metag-ws get-data` does the same.
+:::
 
 ## Look at the reads
 

@@ -10,7 +10,8 @@ reads, one urban soil sample). Four parts that must stay consistent:
 - `materials/metagenomics-workshop.md`: the single markdown source for the
   reveal.js deck and the student/instructor handouts (pandoc).
 - `metag-ws/`: the `metag-ws` helper participants use on the workshop machine
-  (`show-cmd`, `explain-cmd`, `results-for`, plus hidden `_run-all`).
+  (`show-cmd`, `explain-cmd`, `results-for`, `get-data`, plus hidden
+  `_run-all`).
 - `data-prep/`: how the reduced dataset and the precomputed results were built
   (Jug task graph submitted with jug_hpc; not needed to run the workshop).
 - `setup/`: setting up the workshop machine (`README.md`), the database

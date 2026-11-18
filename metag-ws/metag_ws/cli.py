@@ -3,6 +3,7 @@
     metag-ws show-cmd [STEP]       print the command(s) of a step
     metag-ws explain-cmd [STEP]    the same, with every argument explained
     metag-ws results-for [STEP]    bring in the precomputed results up to STEP
+    metag-ws get-data              step 1 in one go: copy the reads into 01_DATA/
 
 Without STEP, a menu of the steps is shown. The steps, their commands and the
 explanations are in steps.toml (next to this file). Results-only steps (too
@@ -28,6 +29,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -715,6 +717,54 @@ def cmd_results_for(steps, args):
                   f'(e.g., for step {nxt.id}): use metag-ws show-cmd rather than a printed copy of the commands.')
 
 
+def remove(path):
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path)
+    elif os.path.lexists(path):
+        path.unlink()
+
+
+def cmd_get_data(steps, args):
+    """A shortcut for step 1: copy everything in the shared data directory
+    into step 1's folder (in the current directory, like the commands).
+    Files already there are left alone; each file is copied under a temporary
+    name first, so that an interrupted copy is not taken for a complete one."""
+    state = load_state()
+    ctx = context_from_state(state)
+    src = Path(ctx.data)
+    if not src.is_dir():
+        raise UserError(f'The workshop data is not available ({src} does not exist)')
+    entries = sorted(src.iterdir())
+    if not entries:
+        raise UserError(f'The workshop data directory ({src}) is empty')
+    step1 = steps.by_id['1']
+    warn_cwd(ctx)
+    dest = Path.cwd() / step1.folder
+    dest.mkdir(parents=True, exist_ok=True)
+    for e in entries:
+        target = dest / e.name
+        if os.path.lexists(target):
+            out.print(f'  {step1.folder}/{e.name} (already there)')
+            continue
+        tmp = dest / f'.{e.name}.partial'
+        remove(tmp)
+        try:
+            if e.is_dir():
+                # copyfile: plain copies, not read-only like the shared files
+                shutil.copytree(e, tmp, copy_function=shutil.copyfile)
+            else:
+                shutil.copyfile(e, tmp)
+            os.replace(tmp, target)
+        except BaseException:
+            remove(tmp)
+            raise
+        out.print(f'  {step1.folder}/{e.name}')
+    state['last'] = step1.id   # as after show-cmd 1: the menu starts on step 2
+    save_state(state)
+    out.print(f'\nStep {step1.id} ({step1.title.lower()}) is done: the workshop data is in '
+              f'[bold]{escape(pretty(dest))}[/].')
+
+
 # --- _run-all -------------------------------------------------------------------
 
 def run_all(argv):
@@ -794,6 +844,9 @@ def main(argv=None):
             sp = sub.add_parser(name, help=help_, description=help_)
             sp.add_argument('step', nargs='?', metavar='STEP')
             sp.set_defaults(fn=fn)
+        help_ = (f'step 1 in one go: copy the workshop data ({config_from_env()["data"]}) '
+                 f'into {steps.by_id["1"].folder}/')
+        sub.add_parser('get-data', help=help_, description=help_).set_defaults(fn=cmd_get_data)
         args = p.parse_args(argv)
         setup_colours()
         args.fn(steps, args)
