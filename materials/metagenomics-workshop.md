@@ -1016,6 +1016,37 @@ cut -f1,2,8,9,13 09_GUNC/GUNC.progenomes_2.1.maxCSS_level.tsv | column -t
 
 Do the bins that CheckM2 calls high quality pass GUNC?
 
+## Limitations of current binning and QC methods {.lecture}
+
+- **Non-chromosomal elements** (e.g., plasmids)
+    - can matter a lot for function and strain specificity, but most methods
+      do not capture them
+    - a very active area of research
+- **Species far from the reference genomes** ("weird" species)
+    - CheckM2 always reports low completeness for *Allobaculum* (and likely
+      others)
+- **Microeukaryotes**
+    - binning does not work well
+    - some methods work only for prokaryotes (e.g., because they use
+      prokaryotic marker genes)
+
+::: handout
+Plasmids have no single-copy marker genes, so CheckM2 and GUNC say
+nothing about them, and their depth (often several copies per cell) and
+composition differ from those of their host's chromosome, so binners rarely
+put them in the right bin. A bin is therefore, at best, the chromosome of the
+organism. Some of the circular contigs of the assembly (step 4) are likely
+plasmids.
+
+The QC tools learned from reference genomes: for lineages far from any of
+them, their estimates are less reliable.
+
+Eukaryotic genomes are larger, have introns and are often at low depth in a
+metagenome. The tools in this workshop (SemiBin2's marker genes, CheckM2,
+GUNC, GTDB-Tk, pyrodigal) are built for bacteria and archaea; BUSCO (see the
+references) also estimates completeness for eukaryotes.
+:::
+
 # Annotate the bins
 
 ```fasta
@@ -1063,6 +1094,11 @@ metag-ws results-for 10
 ::: handout
 GTDB-Tk is the standard way to give a bin its place in the GTDB taxonomy (the
 one SingleM uses in step 3).
+
+The [GTDB](https://gtdb.ecogenomic.org) (Genome Taxonomy Database) is purely
+genome based: *Shigella*, for example, is just a funny *E. coli*. It comes in
+numbered releases, and names change between them, so always report which
+release you used (NCBI, instead, updates its taxonomy continuously).
 
 It finds 120 bacterial (or 53 archaeal) single-copy marker genes in each bin,
 then:
