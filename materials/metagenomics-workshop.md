@@ -417,12 +417,12 @@ TODO: background on SingleM (marker genes, OTU tables, GTDB), and why a
 read-based profile sees organisms that assembly misses.
 :::
 
-# Long vs. short reads
+# Assembly, polishing and binning
 
 - Long reads are long, but each base pair has lower quality
 - Short reads can be used to fix these errors, termed _polishing_
 
-# How to assemble?
+## How to assemble?
 
 Different options
 
@@ -435,9 +435,7 @@ The term _hybrid assembly_ is sometimes used to refer specifically to using a
 specialised hybrid assembler or for the general concept of using long and short
 reads.
 
-# Step 4: Long-read assembly (myloasm)
-
-## Assemble the long reads
+## Step 4: Long-read assembly (myloasm)
 
 ```bash
 myloasm 02_QC/lr.fq.gz -o 04_ASSEMBLY -t 8
@@ -472,7 +470,7 @@ TODO: background on long-read metagenome assembly; N50; what circular
 contigs mean.
 :::
 
-# Step 5: Polishing with short reads
+## Step 5: Polishing with short reads
 
 ## 5.1: Map the short reads to the draft
 
@@ -542,7 +540,7 @@ TODO: why polish (error profile of Nanopore reads), and why polypolish needs
 all alignments (repeats).
 :::
 
-# Step 6: Map reads to the polished assembly
+## Step 6: Map reads to the polished assembly
 
 ## Map the short reads, as pairs
 
@@ -585,7 +583,6 @@ Reads that do not map come from organisms (or parts of genomes) that were not
 assembled.
 :::
 
-# Step 7: Binning (SemiBin2)
 
 ## The metagenomics binning problem
 
@@ -697,7 +694,7 @@ ocean, soil, ...); one trained on similar samples works nearly as well as one
 trained on yours.
 :::
 
-## Bin the contigs
+## Step 7: Binning with SemiBin2
 
 ```bash
 SemiBin2 single_easy_bin \
@@ -735,7 +732,30 @@ the features (composition + coverage), classification vs. binning, and what
 SemiBin2 does.
 :::
 
-# Step 8: Completeness and contamination (CheckM2)
+# MAG QC
+
+## Congratulations! You have FASTA files!
+
+```fasta
+>u71628ctg_len-4032392_circular-yes_depth-8-7-2_duplicated-no
+GTCGGCGGCTCCGGTGAGCGGACCAACCTCGATGTCGTGCGTGGTCTCTGCGCTGTTCTTGACGAGCTTCAGGGTCGTGC
+CGATGGTCGGCCGTACGCGTCACTGATCGAGTTCGTCAAGGACCGACCTGGTCACGACCGTCGCTACGCGATCGACTCAA
+GCAAGATACGCCGCCAGCTTGGCTGGACACCTGCCGAGCCGTTCGAGACCGGAATCCGCAAGACGGTTGAATGGAATCTG
+AGTAACCAGGAATGGATCGGACGGGTCACCAGCGGCAATTACCAGAGCTGGCTGGCGAAGCAATACGCATGAGGATTTTG
+CTTTTCGGCAAAAACGGACAAATCGGTCGTGAACTCCAACGCACGCTGCTGCCTTTGGGCGAAGTGGATGCGCGCGGACG
+GCAAGAAGTGGATCTGGAAGACGTGGACCGTCTCCGGGAAACACTGCGGCAATGTGCGCCGGCGGTGATCGTCAACGCGG
+CCGCGTATACGTCGGTCGATGCGGCGGAAAGCGACGAGGAGTCTGCGTACAGGGTTAACGCCGAGGCCGTCGGCGTGATG
+GCGAGCCACGCCGCGGCCAGTGCCGCCTTGCTGGTGCATTATTCTACCGACTACGTGTTCGATGGCGAGAAGCCGGGCGC
+CTACGTCGAGTTCGACGCCACGAATCCGCAGAACGTCTATGGCCGCTCCAAGCGCGCGGGTGAAGACGCGATCCGCCGCA
+GCGGCTGCAACGCGCTGGTCTTGCGCACGAGCTGGGTTTACTCGGTGCATGGGACCAATTTCGTCAAGACCATACTGCGT
+CTCGCAAGGGAAAAGAGCAGAATCGAGGTCGTCGCCGACCAGCATGGCGCACCGACTTCGGCCGAGCTTATCGCCGACGT
+TACGATGCTGGCGATCTTTGCCCGGAAAAAAGGCCACATTCCCGCCGGAACCTTTCACCTGGCCGCTTCGGGGGACACCA
+GCCGGCATGGACTTGCATGTCATGTGGTTGCGCAGGCGCTGGCGCGCGGCATCGCGCTCACCCTCCGACCACAGGATATC
+TGCGCTGTATCAAGCGAGACGCTGCGGCTTCCCGCCAAGCGGCCGGCCAACTCGCGACTGAACACCAGCGCGCTCGCGAA
+...
+```
+
+Is this a good genome? How can we tell?
 
 ## How can a bin be wrong?
 
@@ -885,7 +905,7 @@ A note that the system is not perfect: CheckM2 always reports low completeness
 for *Allobaculum*, and likely others.
 :::
 
-## Run CheckM2
+## Step 8: Completeness and contamination estimation with CheckM2
 
 ```bash
 checkm2 predict \
@@ -910,8 +930,8 @@ sort -t$'\t' -k2,2gr 08_CHECKM2/quality_report.tsv | cut -f1-3 | column -t
 
 Common thresholds (MIMAG):
 
-- **high quality**: >90% complete, <5% contaminated
-- **medium quality**: ≥50% complete, <10% contaminated
+- **high quality**: >90% complete, &lt;5% contaminated
+- **medium quality**: ≥50% complete, &lt;10% contaminated
 
 Which of your bins are high quality?
 
@@ -920,7 +940,6 @@ MIMAG is a community standard for reporting MAGs
 ([Bowers et al., 2017](https://doi.org/10.1038/nbt.3893)).
 :::
 
-# Step 9: Chimerism (GUNC)
 
 ## GUNC: do the taxa follow the contigs?
 
@@ -971,7 +990,7 @@ the first is contaminated. Both bins have exactly the same genes and the same
 taxa; only where the B genes are changes.
 :::
 
-## Run GUNC
+## Step 9: Run GUNC
 
 ```bash
 mkdir -p 09_GUNC
@@ -1001,9 +1020,30 @@ cut -f1,2,8,9,13 09_GUNC/GUNC.progenomes_2.1.maxCSS_level.tsv | column -t
 
 Do the bins that CheckM2 calls high quality pass GUNC?
 
-# Step 10: Taxonomy of the bins (GTDB-Tk)
+# Annotate the bins
 
-## Classify the bins (not run here)
+```fasta
+>u71628ctg_len-4032392_circular-yes_depth-8-7-2_duplicated-no
+GTCGGCGGCTCCGGTGAGCGGACCAACCTCGATGTCGTGCGTGGTCTCTGCGCTGTTCTTGACGAGCTTCAGGGTCGTGC
+CGATGGTCGGCCGTACGCGTCACTGATCGAGTTCGTCAAGGACCGACCTGGTCACGACCGTCGCTACGCGATCGACTCAA
+GCAAGATACGCCGCCAGCTTGGCTGGACACCTGCCGAGCCGTTCGAGACCGGAATCCGCAAGACGGTTGAATGGAATCTG
+AGTAACCAGGAATGGATCGGACGGGTCACCAGCGGCAATTACCAGAGCTGGCTGGCGAAGCAATACGCATGAGGATTTTG
+CTTTTCGGCAAAAACGGACAAATCGGTCGTGAACTCCAACGCACGCTGCTGCCTTTGGGCGAAGTGGATGCGCGCGGACG
+GCAAGAAGTGGATCTGGAAGACGTGGACCGTCTCCGGGAAACACTGCGGCAATGTGCGCCGGCGGTGATCGTCAACGCGG
+CCGCGTATACGTCGGTCGATGCGGCGGAAAGCGACGAGGAGTCTGCGTACAGGGTTAACGCCGAGGCCGTCGGCGTGATG
+GCGAGCCACGCCGCGGCCAGTGCCGCCTTGCTGGTGCATTATTCTACCGACTACGTGTTCGATGGCGAGAAGCCGGGCGC
+CTACGTCGAGTTCGACGCCACGAATCCGCAGAACGTCTATGGCCGCTCCAAGCGCGCGGGTGAAGACGCGATCCGCCGCA
+GCGGCTGCAACGCGCTGGTCTTGCGCACGAGCTGGGTTTACTCGGTGCATGGGACCAATTTCGTCAAGACCATACTGCGT
+CTCGCAAGGGAAAAGAGCAGAATCGAGGTCGTCGCCGACCAGCATGGCGCACCGACTTCGGCCGAGCTTATCGCCGACGT
+TACGATGCTGGCGATCTTTGCCCGGAAAAAAGGCCACATTCCCGCCGGAACCTTTCACCTGGCCGCTTCGGGGGACACCA
+GCCGGCATGGACTTGCATGTCATGTGGTTGCGCAGGCGCTGGCGCGCGGCATCGCGCTCACCCTCCGACCACAGGATATC
+TGCGCTGTATCAAGCGAGACGCTGCGGCTTCCCGCCAAGCGGCCGGCCAACTCGCGACTGAACACCAGCGCGCTCGCGAA
+...
+```
+
+Congratulations! You have high-quality MAGs. What are they?
+
+## Classify the bins with GTDB-Tk (not run here)
 
 ::: reference
 The command, **not to run**: GTDB-Tk needs about 130 GB of memory and takes
@@ -1086,7 +1126,7 @@ it pplacer):
 - Several partial *Nitrospira_C* bins (SemiBin_7, 10, 26, 27, 28) without a
   species, and SemiBin_22 (25% complete) only to the family (`g__` empty,
   decided by RED).
-- 18 small bins (mostly <15% complete, <1 Mbp) are `Unclassified Bacteria`:
+- 18 small bins (mostly &lt;15% complete, &lt;1 Mbp) are `Unclassified Bacteria`:
   too few marker genes to place them.
 
 "No species" in GTDB means no species representative within its ANI radius,
@@ -1109,8 +1149,10 @@ singlem pipe \
 ```
 
 ::: handout
+
 Tool: [SingleM](https://wwood.github.io/singlem/) again (`pipe` and
 `appraise`; [Woodcroft et al., 2025](https://doi.org/10.1038/s41587-025-02738-1)).
+
 :::
 
 ## Compare reads and bins
@@ -1207,13 +1249,12 @@ grep -c '>' 12_GENES/*.faa
 
 Do larger bins have more genes? About how many genes per Mbp?
 
-# Step 13: Functional annotation (eggNOG-mapper)
+## Step 13: Functional annotation with eggNOG-mapper
 
-## Annotate one bin
+Annotating all bins takes too long, so we will annotate a single one.
 
-Annotating all bins takes too long, so we annotate one: the first command
-picks the best bin in `08_CHECKM2/quality_report.tsv` (highest completeness −
-5 × contamination).
+The first command picks the best bin in `08_CHECKM2/quality_report.tsv`
+(highest completeness − 5 × contamination).
 
 ```bash
 BIN_NAME=$(awk -F'\t' 'NR > 1 { print $2 - 5 * $3, $1 }' 08_CHECKM2/quality_report.tsv \
@@ -1316,9 +1357,9 @@ against GMSC, and transfers these annotations. A single smORF can also be
 looked up on the GMSC website.
 :::
 
-# Step 14: A second binner (MetaBAT2)
+# Using multiple binners
 
-## Why a second binner?
+## Why a second (or a third) binner?
 
 - Binning is hard, and no binner is the best on every sample: each makes
   its own mistakes and misses different genomes
@@ -1337,7 +1378,7 @@ and references](#binning-steps-7-and-14)); here, we compare them and keep
 the best bin of each species (Step 15).
 :::
 
-## 14.1: Bin the contigs
+## 14.1: Bin the contigs with MetaBAT2
 
 Compute the coverage of each contig, from the mapping of Step 6:
 
@@ -1398,10 +1439,10 @@ Our results (precomputed run): MetaBAT2 makes 5 bins (SemiBin2: 31), all
 high quality (94.8–100% complete, ≤2.1% contaminated): the five genomes of
 the dataset. It leaves out the small, low-coverage contigs of the background
 (by default, a bin must be at least 200 kbp), which SemiBin2 puts in small
-bins that are mostly <15% complete.
+bins that are mostly &lt;15% complete.
 :::
 
-# Step 15: Dereplication (Galah)
+## Step 15: Dereplication (Galah)
 
 ## The same genome, many times
 
