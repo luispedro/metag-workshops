@@ -470,9 +470,7 @@ TODO: background on long-read metagenome assembly; N50; what circular
 contigs mean.
 :::
 
-## Step 5: Polishing with short reads
-
-## 5.1: Map the short reads to the draft
+## Step 5.1: Polishing: map the short reads to the draft
 
 Index the draft assembly:
 
@@ -540,9 +538,7 @@ TODO: why polish (error profile of Nanopore reads), and why polypolish needs
 all alignments (repeats).
 :::
 
-## Step 6: Map reads to the polished assembly
-
-## Map the short reads, as pairs
+## Step 6: Map the short reads to the polished assembly, as pairs
 
 ```bash
 mkdir -p 06_MAPPING
@@ -1442,8 +1438,6 @@ the dataset. It leaves out the small, low-coverage contigs of the background
 bins that are mostly &lt;15% complete.
 :::
 
-## Step 15: Dereplication (Galah)
-
 ## The same genome, many times
 
 ```{.dot width=80%}
@@ -1485,7 +1479,7 @@ the sample (or the study): e.g., to map the reads of every sample to it and
 compare the abundance of each species.
 :::
 
-## Dereplicate the bins of both binners
+## Step 15: Dereplicate the bins of both binners (Galah)
 
 Galah reads one CheckM2 report: join those of both binners (without the
 second header line):
