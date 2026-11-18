@@ -1167,9 +1167,7 @@ genomes that are not in GTDB. GTDB-Tk itself warns that its classification
 is not enough to name new taxa (that needs a de novo tree).
 :::
 
-# Step 11: What did the bins capture? (SingleM appraise)
-
-## Marker genes in the bins
+## Step 11: Running SingleM appraise
 
 ```bash
 mkdir -p 11_APPRAISE
@@ -1213,9 +1211,8 @@ singlem appraise \
   from its marker genes. Does it agree with GTDB-Tk (step 10,
   `10_GTDBTK_precomputed`)?
 
-# Step 12: Gene prediction (pyrodigal)
 
-## Functional annotation, in three steps
+# Functional annotation, in three steps
 
 ::: slides
 :::: r-stack
@@ -1250,7 +1247,7 @@ Annotating the functions of a MAG takes three steps:
    regulates. Filter the annotations before drawing conclusions from them.
 :::
 
-## Predict genes in each bin
+## Step 12: Predict genes in each bin with Pyrodigal
 
 ```bash
 mkdir -p 12_GENES
@@ -1784,7 +1781,7 @@ compare your bins with a set of downloaded genomes. Two genomes above 95% ANI
 are usually taken to be the same species.
 :::
 
-# Beyond one sample
+# Beyond a single sample
 
 ## The state of the art: many samples {.lecture}
 
