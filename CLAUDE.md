@@ -103,7 +103,7 @@ filters, styles) is copied from the vibe-workshops repo. Markup conventions:
   extension). Stepped deck figures (e.g. `checkm2_complete.svg`) are produced
   by the same script, picking the variant from the output filename; they need
   explicit rules in `materials/Makefile`. `checkm2.py`, `gunc.py`,
-  `annotation.py` import their style from `checkm1.py`.
+  `annotation.py`, `binning_modes.py` import their style from `checkm1.py`.
 
 The untracked `2026-10-15__*.pptx` decks at the root are older lecture decks
 used as sources when redrawing slides; they are not part of the build.

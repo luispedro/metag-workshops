@@ -1608,6 +1608,107 @@ compare your bins with a set of downloaded genomes. Two genomes above 95% ANI
 are usually taken to be the same species.
 :::
 
+# Beyond one sample
+
+## The state of the art: many samples {.lecture}
+
+We binned one sample. With several samples, bin with the coverage of each
+contig *in every sample*:
+
+- Contigs of the same genome go up and down together across samples;
+  contigs of different genomes rarely do
+- Best results, and single-sample bins carry hidden contamination
+  ([Mattock & Watson, 2023](https://doi.org/10.1038/s41592-023-01934-8))
+- But slow: every sample is mapped to every assembly
+
+Faster alternatives:
+
+- Concatenate the assemblies, then bin them together
+  ([VAMB](https://doi.org/10.1038/s41587-020-00777-4),
+  [SemiBin](https://doi.org/10.1038/s41467-022-29843-y))
+- Choose the samples cleverly
+  ([Bin Chicken](https://eprints.qut.edu.au/253145/))
+- Compute the coverage faster
+  ([fairy](https://doi.org/10.1186/s40168-024-01861-6),
+  [strobealign `--aemb`](https://semibin.readthedocs.io/en/latest/aemb/))
+
+::: handout
+With one sample, binning has one coverage value per contig, and genomes of
+similar abundance and composition are easily mixed up. With *N* samples,
+each contig has a coverage profile of *N* values, and the contigs of one
+genome share that profile (their organism is more abundant in some samples
+than in others). Binning with these profiles (*multi-sample* or
+multi-coverage binning) gives more, and cleaner, bins than single-sample
+binning. Comparing the two on the same data, Mattock and Watson found that
+single-sample binning produced bins with contamination that the usual
+quality checks (step 8) do not detect, and that the multi-sample bins did
+not have.
+
+The cost is the mapping: each of the *N* samples is assembled on its own,
+and the reads of every sample are mapped to every assembly, *N*² mappings,
+which quickly becomes the slowest step of the analysis. There are several
+ways around it:
+
+- *Concatenation* (introduced by VAMB, also in SemiBin2 as
+  `SemiBin2 multi_easy_bin`): the assemblies are concatenated into one file,
+  each sample is mapped once to it (*N* mappings), the concatenated contigs
+  are binned together, and the bins are split by sample at the end.
+- *Choosing the samples*: Bin Chicken picks the samples whose assembly
+  together (co-assembly) is most likely to recover new genomes, using the
+  marker genes found by SingleM (step 3), instead of using all of them.
+- *Faster coverage*: fairy and `strobealign --aemb` (a mode of strobealign
+  added for SemiBin2) estimate the coverage of each contig without computing full
+  alignments, which is all binning needs. Both appeared in 2024;
+  `--aemb` has no paper yet.
+:::
+
+## Ways to bin many samples {.lecture}
+
+::: slides
+![](media/binning_modes){width="85%"}
+:::
+
+::: instructor
+This is one of the most confusing issues, and one that users ask about all
+the time. The usual mix-ups:
+
+- Using several samples does not require co-assembly: in multi-sample and
+  concatenated binning, each sample is still assembled on its own; only the
+  *coverage* comes from all samples.
+- The bins of multi-sample and concatenated binning are still per sample
+  (split by sample at the end), so the same species is found in several
+  samples and the bins still need dereplication (step 15).
+- In SemiBin2, `single_easy_bin` with several BAM files (one per sample)
+  bins one assembly with the coverage of all samples (co-assembly or
+  multi-sample); `multi_easy_bin` is concatenated binning.
+
+Walk through the panels in order, asking each time: how many mappings, and
+how many coverage values does each contig get?
+:::
+
+::: handout
+![Four ways to bin several samples: reads (purple) are mapped (green
+arrows) to contigs (orange).](media/binning_modes){width="90%"}
+
+Four ways to use *N* samples (here three), redrawn from
+[Pan et al. (2022)](https://doi.org/10.1038/s41467-022-29843-y):
+
+- **Single-sample**: each sample is assembled, mapped and binned on its own
+  (what we did). One coverage value per contig.
+- **Co-assembly**: the reads of all samples are assembled together, and
+  each sample is mapped to that assembly, giving *N* coverage values per
+  contig. The assembly is harder (larger, and related strains from
+  different samples get mixed), but genomes too rare to assemble in any one
+  sample can be recovered.
+- **Multi-sample** (multi-against-multi): each sample is assembled on its
+  own, and every sample is mapped to every assembly (*N*² mappings). Best
+  results, highest cost.
+- **Concatenated**: each sample is assembled on its own, the assemblies are
+  concatenated, and each sample is mapped once to the concatenation (*N*
+  mappings). Nearly as good as multi-sample binning, at a fraction of the
+  cost.
+:::
+
 # Wrap-up
 
 ## What we did
@@ -1910,6 +2011,24 @@ not ranked, and not all of them work with every kind of data.
   (2018). Recovery of genomes from metagenomes via a dereplication,
   aggregation and scoring strategy. *Nature Microbiology*.
   <https://doi.org/10.1038/s41564-018-0171-1>
+
+**Binning with many samples** (see [The state of the art: many
+samples](#the-state-of-the-art-many-samples)):
+
+- Mattock J, Watson M (2023). A comparison of single-coverage and
+  multi-coverage metagenomic binning reveals extensive hidden
+  contamination. *Nature Methods*.
+  <https://doi.org/10.1038/s41592-023-01934-8>
+- [Bin Chicken](https://github.com/AroneyS/binchicken): chooses which
+  samples to co-assemble. Aroney STN, et al. Bin Chicken: targeted
+  metagenomic coassembly for the efficient recovery of novel genomes.
+  <https://eprints.qut.edu.au/253145/>
+- [fairy](https://github.com/bluenote-1577/fairy): fast coverage for
+  multi-sample binning. Shaw J, Yu YW (2024). Fairy: fast approximate
+  coverage for multi-sample metagenomic binning. *Microbiome*.
+  <https://doi.org/10.1186/s40168-024-01861-6>
+- [strobealign `--aemb`](https://semibin.readthedocs.io/en/latest/aemb/): fast
+  coverage with strobealign, for SemiBin2. No paper yet.
 
 ### Bin quality (steps 8 and 9)
 

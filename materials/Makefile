@@ -34,7 +34,9 @@ $(ANNOT_STEPS): $(BUILD)/media/%.svg: media/annotation.py
 	@mkdir -p $(dir $@)
 	$(PYTHON) $< $@
 $(BUILD)/$(STEM)__slides.html: $(CHECKM1_STEPS) $(CHECKM2_STEPS) $(GUNC_STEPS) $(ANNOT_STEPS)
-# checkm2.py, gunc.py and annotation.py take their style from checkm1.py.
+# checkm2.py, gunc.py, annotation.py and binning_modes.py take their style
+# from checkm1.py.
 $(CHECKM2_STEPS) $(foreach f,svg pdf png,$(BUILD)/media/checkm2.$(f)): media/checkm1.py
 $(GUNC_STEPS) $(foreach f,svg pdf png,$(BUILD)/media/gunc.$(f)): media/checkm1.py
 $(ANNOT_STEPS) $(foreach f,svg pdf png,$(BUILD)/media/annotation.$(f)): media/checkm1.py
+$(foreach f,svg pdf png,$(BUILD)/media/binning_modes.$(f)): media/checkm1.py
