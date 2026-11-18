@@ -1281,6 +1281,78 @@ grep -c '>' 12_GENES/*.faa
 
 Do larger bins have more genes? About how many genes per Mbp?
 
+## Annotation by orthology: eggNOG {.lecture}
+
+::: slides
+![](media/eggnog_og.png){width="65%"}
+:::
+
+- **Orthologous groups** (OGs): genes descended from one ancestral gene
+- Each group carries the annotations of its members
+
+::: handout
+![An orthologous group on the eggNOG 6 website
+([LCOG0787](http://eggnog6.embl.de/search/ogs/LCOG0787/), alanine racemase),
+with the annotations of its members (gene names, Pfam domains, GO terms,
+KEGG, …).](media/eggnog_og.png){width="80%"}
+
+The simplest way to annotate a protein is to search for it in a database and
+copy the annotation of its best hit. This can mislead: the best hit may be a
+*paralog* (a copy of the gene left by a gene duplication), and paralogs often
+end up with different functions. *Orthologs* (genes separated by speciation,
+the "same" gene in two species) usually keep the same function.
+
+[eggNOG](http://eggnog5.embl.de) groups the proteins of thousands of genomes
+into orthologous groups, at many taxonomic levels (all organisms, Bacteria,
+Proteobacteria, …). Each group has a phylogenetic tree and the annotations of
+its members, with the fraction of members that carry each one: in the
+example above, 96% of the members have the Pfam domain `Ala_racemase_N`.
+The screenshot is from the eggNOG 6 website; eggNOG-mapper 2.1, which we use,
+works with eggNOG 5, which is organised in the same way.
+:::
+
+## How eggNOG-mapper annotates a protein {.lecture}
+
+```{.dot width=95%}
+digraph emapper {
+  rankdir=LR;
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,
+        fillcolor="#eceff1", color="#37474f"];
+  edge [color="#37474f"];
+  query  [label="Your\nprotein"];
+  seed   [label="1. Seed ortholog\nbest hit in eggNOG\n(DIAMOND or HMMER)"];
+  orth   [label="2. Its orthologs\nfrom the tree\nof its group"];
+  scope  [label="3. Drop distant\northologs\n(taxonomic scope)"];
+  annot  [label="4. Transfer their\nannotations"];
+  query -> seed -> orth -> scope -> annot;
+}
+```
+
+- Orthologs, not just the best hit: paralogs (copies left by a gene
+  duplication) are left out
+- Only orthologs from related organisms are used
+
+::: handout
+eggNOG-mapper annotates each protein in four steps:
+
+1. **Seed ortholog.** The protein is searched against the eggNOG proteins
+   (here with DIAMOND, `-m diamond`; HMMER and MMseqs2 are alternatives), and
+   its best hit is the *seed ortholog*.
+2. **Orthologs.** In the tree of the seed ortholog's group, the orthologs of
+   the seed are told apart from its paralogs by the duplication nodes of the
+   tree. They are one-to-one (one copy in each species) or one-to-many.
+3. **Taxonomic scope.** Orthologs from distant organisms are dropped: only
+   those within a taxonomic level are kept (chosen automatically by default;
+   `--tax_scope`).
+4. **Transfer.** The annotations of the remaining orthologs (by default all of
+   them, one-to-one or not; `--target_orthologs`) are transferred to the
+   protein.
+
+The output records these steps: `seed_ortholog` (step 1), `eggNOG_OGs` (the
+groups of the seed, at each level) and `max_annot_lvl` (the level whose
+orthologs were used).
+:::
+
 ## Step 13: Functional annotation with eggNOG-mapper
 
 Annotating all bins takes too long, so we will annotate a single one.
@@ -1340,8 +1412,76 @@ grep -i nitrogenase 13_EGGNOG/$BIN_NAME.emapper.annotations | cut -f1,8,9
 - Which COG categories are the most common?
 
 ::: instructor
-TODO: background on orthology-based annotation, and an exercise looking for
-a function across bins.
+TODO: an exercise looking for a function across bins.
+:::
+
+## Antibiotic resistance genes: RGI and CARD {.lecture}
+
+::: slides
+![](media/card_adef.png){width="75%"}
+:::
+
+- Same principle, specialised database: [CARD](https://card.mcmaster.ca/)
+- [RGI](https://github.com/arpcard/rgi) finds CARD genes in proteins, contigs
+  or reads
+
+::: handout
+![The CARD entry for
+[adeF](https://card.mcmaster.ca/ontology/37157).](media/card_adef.png){width="80%"}
+
+eggNOG-mapper is generic: it annotates any protein that has orthologs in
+eggNOG. Specialised tools work in the same way (compare with a database of
+genes of known function, then filter), with a database curated for one
+group of functions. For antibiotic resistance genes (ARGs), the
+[Comprehensive Antibiotic Resistance Database](https://card.mcmaster.ca/)
+(CARD) describes each gene with its gene family, the drug classes it acts on
+and its resistance mechanism. The example above is *adeF*, the membrane
+fusion protein of the AdeFGH multidrug efflux pump of *Acinetobacter
+baumannii* (gene family: RND antibiotic efflux pump; drug classes:
+tetracyclines and fluoroquinolones; mechanism: antibiotic efflux).
+
+The Resistance Gene Identifier (RGI) annotates proteins, contigs or reads
+with CARD. Each CARD gene has its own curated cutoff (a bitscore) for a match
+to count. RGI is not installed on the workshop machine.
+
+Other specialised databases exist for other functions, for example
+[CAZy](https://www.cazy.org/) for carbohydrate-active enzymes (eggNOG-mapper
+reports CAZy families too, in the `CAZy` column).
+:::
+
+## RGI: beware the false positives {.lecture}
+
+- **Strict**: a match above the gene's cutoff
+- **Loose**: a match below the cutoff
+- **Nudged**: a match below the cutoff, but with high identity over a
+  fragment
+
+Even the strict hits need informed human judgement:
+
+- Efflux pumps: present in most bacteria, and most do not make them resistant
+- *vanR* (a regulator) without the genes it regulates: probably not an ARG
+
+::: handout
+RGI classifies its hits as *Perfect* (identical to a CARD reference),
+*Strict* (above the curated cutoff of that gene) or *Loose* (below it).
+Loose hits are not reported by default (`--include_loose`): most of them are
+distant homologs, not resistance genes. *Nudged* hits are loose hits with
+high identity (≥95%) to a reference, over a part of it, for example a gene
+cut at the end of a contig; RGI can report them as strict
+(`--include_nudge`).
+
+A hit, even a strict one, does not mean that the organism is resistant:
+
+- Efflux pumps make up many of the hits in most genomes. Bacteria have
+  many of them, for many substrates; only some confer resistance, and often
+  only when they are overexpressed. A hit to one part of a pump, such as
+  *adeF*, says little on its own.
+- Some genes only confer resistance together with others. *vanR* is the
+  regulator of the vancomycin resistance genes (*vanHAX*); it belongs to a
+  large family of regulators, so a *vanR* hit without the genes it regulates
+  is probably not an ARG.
+
+As with eggNOG-mapper, look at the hits before counting them.
 :::
 
 ## What about small proteins? {.lecture}
@@ -2230,6 +2370,18 @@ samples](#the-state-of-the-art-many-samples)):
   al. (2014). InterProScan 5: genome-scale protein function classification.
   *Bioinformatics*.
   <https://doi.org/10.1093/bioinformatics/btu031>
+
+**Specialised databases:**
+
+- [CARD](https://card.mcmaster.ca/) and [RGI](https://github.com/arpcard/rgi):
+  the Comprehensive Antibiotic Resistance Database, and the tool that finds
+  its genes in proteins, contigs or reads. Alcock BP, et al. (2023). CARD
+  2023: expanded curation, support for machine learning, and resistome
+  prediction at the Comprehensive Antibiotic Resistance Database. *Nucleic
+  Acids Research*. <https://doi.org/10.1093/nar/gkac920>
+- [CAZy](https://www.cazy.org/): carbohydrate-active enzymes. Drula E, et al.
+  (2022). The carbohydrate-active enzyme database: functions and literature.
+  *Nucleic Acids Research*. <https://doi.org/10.1093/nar/gkab1045>
 
 **Small proteins:**
 

@@ -58,7 +58,7 @@ Not done yet:
 
 * **Background in the notes**: the TODO notes in
   `materials/metagenomics-workshop.md` (fastp/fastplong, SingleM, assembly,
-  polishing, orthology-based annotation, real-data runtimes) and the
+  polishing, real-data runtimes) and the
   instructor notes on the AWS machine (logging in, activation).
 * **Trimming the precomputed bundle** (below).
 * **Tests** (below): only the end-to-end `run_all_sim.sh` exists.
