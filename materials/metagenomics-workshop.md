@@ -1221,7 +1221,7 @@ singlem appraise \
   `10_GTDBTK_precomputed`)?
 
 
-# Functional annotation, in three steps
+# Functional annotation
 
 ::: slides
 :::: r-stack
@@ -1363,9 +1363,6 @@ orthologs were used).
 
 Annotating all bins takes too long, so we will annotate a single one.
 
-The first command picks the best bin in `08_CHECKM2/quality_report.tsv`
-(highest completeness − 5 × contamination).
-
 ```bash
 BIN_NAME=$(awk -F'\t' 'NR > 1 { print $2 - 5 * $3, $1 }' 08_CHECKM2/quality_report.tsv \
     | sort -gr | head -n 1 | cut -d' ' -f2)
@@ -1380,8 +1377,13 @@ pixi run -e eggnog emapper.py \
     --cpu 8 --override
 ```
 
+::: instructor
+The first command picks the best bin in `08_CHECKM2/quality_report.tsv`
+(highest completeness − 5 × contamination).
+
 To annotate another bin, set the variable yourself instead, e.g.
 `BIN_NAME=SemiBin_2`.
+:::
 
 ::: handout
 `BIN_NAME=...` sets a shell variable; `$BIN_NAME` uses it. `$(...)` runs a
@@ -1622,7 +1624,7 @@ bins that are mostly &lt;15% complete.
 
 ## The same genome, many times
 
-```{.dot width=80%}
+```{.dot width=66%}
 digraph derep {
   rankdir=LR;
   node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,
@@ -1645,6 +1647,8 @@ digraph derep {
 }
 ```
 
+## Dereplication: keep one genome per species
+
 - Bins with ≥95% average nucleotide identity (ANI) are the same species
 - *Dereplication* groups them and keeps the best bin of each group
 
@@ -1661,10 +1665,12 @@ the sample (or the study): e.g., to map the reads of every sample to it and
 compare the abundance of each species.
 :::
 
-## Step 15: Dereplicate the bins of both binners (Galah)
+## Step 15: Dereplicate the bins of both binners with Galah
 
+::: handout
 Galah reads one CheckM2 report: join those of both binners (without the
 second header line):
+:::
 
 ```bash
 mkdir -p 15_DEREP
@@ -1847,7 +1853,7 @@ ways around it:
 ## Ways to bin many samples {.lecture}
 
 ::: slides
-![](media/binning_modes){width="85%"}
+![](media/binning_modes){width="75%"}
 :::
 
 ::: instructor
