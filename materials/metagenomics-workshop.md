@@ -564,6 +564,31 @@ short-read one, `03_SINGLEM/sr.profile.html`:
 - Which differences could come from the technology, and which from the amount
   of data?
 
+## The full sample {.lecture}
+
+::: slides
+![](media/singlem_sr_full){height="520"} ![](media/singlem_lr_full){height="520"}
+
+Short reads (left) and long reads (right), **full dataset**: your profiles
+will look very different!
+:::
+
+::: handout
+![](media/singlem_sr_full){width="48%"} ![](media/singlem_lr_full){width="48%"}
+
+The SingleM profiles of the full sample, from the short reads (left) and the
+long reads (right). The full sample is much more complex than the toy dataset
+that we are using in the workshop. You can also see how the two technologies
+show a very high level of agreement.
+:::
+
+::: instructor
+These are the profiles of the full sample (~20 GB short reads, ~70 GB long
+reads), not of the reduced workshop dataset. Use them to answer the questions
+of Step 3.2 for the real sample, and to stress that the subsampling changed
+the composition completely.
+:::
+
 # Assembly, polishing and binning
 
 - Long reads are long, but each base pair has lower quality
