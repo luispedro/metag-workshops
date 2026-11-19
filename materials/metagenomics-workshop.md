@@ -1895,11 +1895,37 @@ Four ways to use *N* samples (here three), redrawn from
 
 ## What we did
 
-From short and long reads of one soil sample to quality-checked, annotated
-and classified draft genomes, one per species:
+From short and long reads of one soil sample to quality-checked, classified
+and annotated draft genomes (MAGs), one per species:
 
-QC → profiling → assembly → polishing → mapping → binning → quality checks →
-taxonomy → gene prediction → annotation → a second binner → dereplication
+```{.dot width=100%}
+digraph wrapup {
+  nodesep=0.5; ranksep=0.35;
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=14,
+        fillcolor="#eceff1", color="#37474f", margin="0.15,0.08", width=2.4];
+  edge [color="#37474f"];
+  reads   [label=<<b>Reads</b><br/><font point-size="11" color="#546e7a">QC · profiling<br/><i>steps 1–3</i></font>>];
+  contigs [label=<<b>Contigs</b><br/><font point-size="11" color="#546e7a">assembly · polishing<br/><i>steps 4–6</i></font>>];
+  bins    [label=<<b>Bins</b><br/><font point-size="11" color="#546e7a">SemiBin2 · MetaBAT2<br/><i>steps 7, 14</i></font>>];
+  qual    [label=<<b>Quality</b><br/><font point-size="11" color="#546e7a">CheckM2 · GUNC · appraise<br/><i>steps 8, 9, 11</i></font>>];
+  who     [label=<<b>Who &amp; what</b><br/><font point-size="11" color="#546e7a">GTDB-Tk · eggNOG<br/><i>steps 10, 12, 13</i></font>>];
+  mags    [label=<<b>MAGs</b><br/><font point-size="11">one per species<br/><i>step 15</i></font>>,
+           fillcolor="#c8e6c9", color="#2e7d32", penwidth=1.5];
+  { rank=same; reads -> contigs -> bins; }
+  { rank=same; mags -> who -> qual [dir=back]; }
+  bins -> qual;
+  reads -> mags [style=invis];
+}
+```
+
+## Take-home messages {.lecture}
+
+- Long reads build the assembly; short reads polish it and give the coverage
+  for binning
+- A bin is a hypothesis: check its completeness, contamination and
+  chimerism before using it
+- The bins are only part of the community: compare them with the reads
+- Binners disagree: run more than one, then keep one genome per species
 
 ::: instructor
 TODO: what changes on real (full-size) data: runtimes and resources, and
