@@ -91,6 +91,24 @@ TODO: a slide or two of background on metagenomics, short vs. long reads,
 and what a bin (MAG) is.
 :::
 
+## Timetable {.no-tag}
+
+| Time          |                |
+|---------------|----------------|
+| 11:00 – 12:15 | Workshop       |
+| 12:15 – 12:45 | **Lunch**      |
+| 12:45 – 13:30 | Workshop       |
+| 13:30 – 13:40 | **Coffee break** |
+| 13:40 – 14:30 | Workshop       |
+
+::: instructor
+Rough targets, to keep the timing on track: lunch after Step 7 (binning),
+before MAG QC; coffee break during functional annotation, after Step 13
+(eggNOG-mapper) has started. If behind after the coffee break, shorten
+"Using multiple binners" (participants can use `results-for 15`) and the
+public-database and many-samples parts (mostly lecture).
+:::
+
 ## The data
 
 One urban soil sample, sequenced with both Illumina (short reads) and Oxford
@@ -283,6 +301,29 @@ remote, ...): with Jupyter or VS Code, they can open the HTML files directly.
 :::
 
 # Step 1: Get data
+
+## From the sequencer to FASTQ {.lecture}
+
+- A Nanopore sequencer records an electrical **signal** (POD5 files), not
+  bases
+- **Basecalling** (Dorado) turns the signal into reads; you usually receive
+  them as FASTQ (sometimes as unaligned BAM)
+- Dorado has three models: **fast**, **hac** (high accuracy) and **sup**
+  (super accuracy)
+- **Check that `sup` was used**: it is slower, but its reads have fewer
+  errors, which means better assemblies and fewer broken genes
+
+::: handout
+Basecalling is usually done by the sequencing facility, on GPUs, and the
+FASTQ files are what you get. The model is recorded in the read headers of
+the FASTQ (or in the BAM header): look for `sup` in the model name, or ask
+the facility. If only the signal files (POD5) are available, the reads can be
+basecalled again with a newer or more accurate model.
+
+Errors in Nanopore reads are mostly small insertions and deletions, which
+shift the reading frame of genes: the fewer errors in the reads, the fewer
+remain after assembly and polishing (step 5).
+:::
 
 ## Copy the reads
 
@@ -514,6 +555,60 @@ The outputs are:
 Because every genome has each marker exactly once, counting markers counts
 cells, not bases: a profile from SingleM does not favour organisms with large
 genomes.
+:::
+
+## Output 1: the OTU table {.lecture}
+
+One row per **OTU**: a window sequence found in one marker gene
+(`sr.otu.tsv`, 880 rows; sequences and taxonomy shortened here):
+
+```{.no-cue}
+gene                      sample  sequence         num_hits  coverage  taxonomy
+S3.1.ribosomal_..._rplB   sr_R1   GAGCTGAAGGCC…    21        34.62     Root; …; g__DATFES01; s__DATFES01 sp035457725
+S3.1.ribosomal_..._rplB   sr_R1   GAGATGCTGCCG…    1         1.65      Root; …; c__Gammaproteobacteria; o__Burkholderiales
+S3.2.ribosomal_..._rplC   sr_R1   GTCGACGTCGCC…    9         14.84     Root; …; g__DATFES01; s__DATFES01 sp035457725
+S3.3.ribosomal_..._rplN   sr_R1   GCTGCGGTGCTC…    15        24.73     Root; …; g__DATFES01; s__DATFES01 sp035457725
+S3.6.ribosomal_protein_S5 sr_R1   GGAACCGGGATC…    27        44.51     Root; …; g__DATFES01; s__DATFES01 sp035457725
+S3.7.ribosomal_protein_S7 sr_R1   TATCAAGTGCCG…    17        28.02     Root; …; g__DATFES01; s__DATFES01 sp035457725
+…
+```
+
+- The same species appears **many times**: once per marker (here 36 of the
+  markers), sometimes in several OTUs per marker (sequencing errors, strains)
+- Each OTU's coverage is noisy (1 read = 1.65×), and its taxonomy can stop at
+  any rank
+- Keeps the **sequences**: input for `singlem appraise` (step 11) and for
+  comparing samples at the sequence level
+
+## Output 2: the taxonomic profile {.lecture}
+
+One row per **taxon**: the OTUs of all the markers combined
+(`sr.profile.tsv`, 40 rows):
+
+```{.no-cue}
+sample  coverage  taxonomy
+sr_R1   5.98      Root; d__Bacteria
+sr_R1   2.27      Root; d__Bacteria; p__Pseudomonadota; c__Alphaproteobacteria
+sr_R1   0.17      Root; d__Bacteria; p__Pseudomonadota; c__Alphaproteobacteria; o__CACIAM-22H2; f__CACIAM-22H2
+sr_R1   0.8       Root; d__Bacteria; p__Pseudomonadota; c__Alphaproteobacteria; o__CACIAM-22H2; f__CACIAM-22H2; g__DATFES01
+sr_R1   27.56     Root; d__Bacteria; p__Pseudomonadota; c__Alphaproteobacteria; o__CACIAM-22H2; f__CACIAM-22H2; g__DATFES01; s__DATFES01 sp035457725
+…
+```
+
+- No genes, no sequences: DATFES01 sp035457725 is now **one row**, with one
+  coverage (27.56×), a consensus of its OTUs across markers
+- Coverage is **not cumulative**: `d__Bacteria` 5.98 is what could be placed
+  only as far as Bacteria, not all Bacteria; add a taxon's row and all rows
+  below it for its total
+- The coverages sum to the coverage of the whole community (84.91× here);
+  this is what Krona draws
+
+::: handout
+In short: the OTU table is *per marker gene and sequence*, the raw evidence;
+the taxonomic profile is *per taxon*, the summary. Use the profile to answer
+"who is there, and how much?"; use the OTU table when you need the sequences,
+e.g. to check whether a MAG covers an OTU (step 11) or to look at diversity
+below the species level.
 :::
 
 ## 3.1: Short reads
