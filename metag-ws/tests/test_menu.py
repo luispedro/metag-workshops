@@ -158,14 +158,14 @@ def typed_step_and_enter_then_menu_is_erased():
     screen, code = run(['5.2\n'])
     assert code == 0
     assert not contains(screen, 'Workshop steps')
-    assert contains(screen, '# Step 5.2: Polishing with short reads: Polish (polypolish)')
+    assert contains(screen, 'Step 5.2: Polishing with short reads: Polish (polypolish)')
 
 
 @check
 def enter_chooses_the_cursor_step():
-    screen, code = run([DOWN, '\r'])
+    screen, code = run([DOWN, '\r'], rows=50)
     assert code == 0
-    assert contains(screen, '# Step 2.1: Read quality control: Short reads (fastp)')
+    assert contains(screen, 'Step 2.1: Read quality control: Short reads (fastp)')
 
 
 @check
@@ -198,7 +198,7 @@ def plain_menu_when_asked():
     screen, code = run(['\r'], env={'METAG_WS_MENU': 'plain'})
     assert code == 0
     assert contains(screen, 'Step [1] (q to quit):')
-    assert contains(screen, '# Step 1: Get data')
+    assert contains(screen, 'Step 1: Get data')
 
 
 @check

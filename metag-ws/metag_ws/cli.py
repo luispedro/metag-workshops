@@ -636,6 +636,10 @@ def cmd_show(steps, args):
     r = Renderer(steps, ctx)
     warn_cwd(ctx)
     for i, leaf in enumerate(st.leaves()):
+        if out.is_terminal:
+            show_leaf_terminal(r, leaf)
+            continue
+        # redirected: the commands (and comments) alone on stdout, notes on stderr
         if i:
             print()
         if leaf.results_only:
@@ -647,6 +651,33 @@ def cmd_show(steps, args):
         sys.stdout.flush()
         if leaf.look_at:
             err.print(f'[dim]What to look at:\n{escape(r.look_at(leaf))}[/]')
+
+
+def show_leaf_terminal(r, leaf):
+    """show-cmd on a terminal: the commands in a block of their own, in colour,
+    set apart from the notes around them. They are not indented (bash leaves
+    lines starting with a space out of the history) and are soft-wrapped (so a
+    copied long line is still one line)."""
+    out.print()
+    out.rule(style='frame')   # a rule with the title in it would truncate long titles
+    out.print(f'[title]Step {leaf.id}: {escape(leaf.full_title())}[/]')
+    if leaf.results_only:
+        err.print(f'[warn][bold]Results only: do not run this step.[/bold]\n{escape(leaf.results_only)}[/]')
+    else:
+        warn_missing(r, leaf)
+    for line in r.header(leaf)[1:]:
+        out.print(f'[dim]{escape(line)}[/]', soft_wrap=True)
+    out.print()
+    if leaf.results_only:
+        out.print('[heading]The command (look, do not run it):[/]')
+    else:
+        out.print('[heading]Type (or copy) this:[/]')
+    out.print()
+    out.print(Text('\n'.join(r.commands(leaf)), style='dim' if leaf.results_only else 'cmd'), soft_wrap=True)
+    out.print()
+    if leaf.look_at:
+        out.print('[heading]What to look at:[/]')
+        out.print(escape(r.look_at(leaf)), soft_wrap=True)
 
 
 def cmd_explain(steps, args):
