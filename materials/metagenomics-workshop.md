@@ -512,12 +512,15 @@ next version will also use k-mers.
 ::: slides
 :::: r-stack
 ::::: {.fragment .fade-out data-fragment-index="1"}
-![](media/singlem_screen.svg)
+![](media/singlem_marker.svg)
 :::::
 ::::: {.fragment .fade-in-then-out data-fragment-index="1"}
+![](media/singlem_screen.svg)
+:::::
+::::: {.fragment .fade-in-then-out data-fragment-index="2"}
 ![](media/singlem_otus.svg)
 :::::
-::::: {.fragment .fade-in data-fragment-index="2"}
+::::: {.fragment .fade-in data-fragment-index="3"}
 ![](media/singlem_taxonomy.svg)
 :::::
 ::::
@@ -659,7 +662,7 @@ short-read one, `03_SINGLEM/sr.profile.html`:
 - Which differences could come from the technology, and which from the amount
   of data?
 
-## The full sample {.lecture}
+## The full sample's taxonomic profile {.lecture}
 
 ::: slides
 ![](media/singlem_sr_full){height="520"} ![](media/singlem_lr_full){height="520"}

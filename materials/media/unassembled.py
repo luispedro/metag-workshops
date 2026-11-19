@@ -38,7 +38,7 @@ ROWS = [
      ['Assembly breaks', 'into pieces'], BAD),
     (415, 'Eukaryotes', ['often huge genomes'], '#a6761d',
      [[60, 250]],
-     ['Often too big', 'to cover; tools', 'mostly for bacteria'], BAD),
+     ['Often too big to', 'cover; tools mostly', 'for Bacteria/Archaea'], BAD),
 ]
 SNPS = [80, 165, 200, 250]   # where the second strain differs (from X0)
 

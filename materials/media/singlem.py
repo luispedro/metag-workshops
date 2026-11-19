@@ -2,7 +2,8 @@
 
 Redrawn from media/SingleM-marker-gene-profiling.svg, in the style of the
 CheckM1 cartoon (checkm1.py): reads are dark lines, the part of a read in a
-marker gene's 20 amino-acid window a coloured box. (1) Screen the reads: keep
+marker gene's 20 amino-acid window a coloured box. An example marker gene,
+with its window, is drawn at the top. (1) Screen the reads: keep
 the few that cover the window of one of the 59 marker genes; (2) align them to
 the marker's HMM, cut out the window, and group reads with the same window
 sequence into OTUs; (3) give each OTU a taxonomy by comparing it with GTDB
@@ -14,7 +15,7 @@ picks the figure:
     python media/singlem.py build/media/singlem.pdf          # the handout figure
     python media/singlem.py build/media/singlem_screen.svg   # one step of the deck
 
-The steps (singlem_screen, _otus, _taxonomy) are listed in ../Makefile.
+The steps (singlem_marker, _screen, _otus, _taxonomy) are listed in ../Makefile.
 """
 import subprocess
 import sys
@@ -23,12 +24,13 @@ from pathlib import Path
 import checkm1
 from checkm1 import BAD, FAINT, GREY, TEXT, text
 
-W, H = 1080, 470
+DY = 110                # the steps sit below the marker gene
+W, H = 1080, 470 + DY
 LIGHT = '#888888'
 READ = '#333333'
 HIT = '#3c78d8'                       # a marker gene, as in checkm1.py
 SEQ = ['#1b9e77', '#d95f02']          # two window sequences: two OTUs
-STEPS = ['screen', 'otus', 'taxonomy']
+STEPS = ['marker', 'screen', 'otus', 'taxonomy']
 
 
 def svg(width, height, body, name):
@@ -59,6 +61,20 @@ def heading(x, title, sub):
     return out
 
 
+def marker():
+    """The example marker gene and its window, above the three steps."""
+    x0, x1, wx0, wx1, y = 300, 780, 505, 575, 30
+    return [text(20, 52, 'A marker gene', size=26, weight='bold'),
+            f'<rect x="{x0}" y="{y}" width="{x1 - x0}" height="32" rx="4" '
+            f'style="fill:#ffffff;stroke:{GREY};stroke-width:3" />',
+            f'<rect x="{wx0}" y="{y}" width="{wx1 - wx0}" height="32" '
+            f'style="fill:{HIT};stroke:{GREY};stroke-width:3" />',
+            text(x1 + 20, 52, 'its 20 aa window', size=19, colour=LIGHT),
+            text(x0, y + 62, 'one of 59 single-copy genes; only its window is used',
+                 size=19, colour=LIGHT),
+            f'<path d="M 20,{DY - 6} H {W - 20}" style="fill:none;stroke:{FAINT};stroke-width:2" />']
+
+
 def screen():
     """Most reads miss the marker windows: only the hits go on."""
     out = heading(20, '1. Screen', ['DIAMOND: reads vs a 20 aa', 'window in each of 59',
@@ -76,13 +92,8 @@ def screen():
         else:
             out.append(line(x, x + 100, y, READ, 7))
             out.append(box(hit, hit + 50, y, HIT))
-    # A marker gene, and its window.
-    out.append(f'<rect x="30" y="336" width="280" height="28" rx="4" '
-               f'style="fill:#ffffff;stroke:{GREY};stroke-width:3" />')
-    out.append(f'<rect x="145" y="336" width="50" height="28" '
-               f'style="fill:{HIT};stroke:{GREY};stroke-width:3" />')
-    out.append(text(30, 392, 'a marker gene, its window', size=19, colour=LIGHT))
-    out.append(text(20, 444, 'most reads miss every window', size=19, colour=LIGHT))
+    out.append(text(20, 360, 'most reads miss', size=19, colour=LIGHT))
+    out.append(text(20, 384, 'every window', size=19, colour=LIGHT))
     return out
 
 
@@ -138,11 +149,15 @@ def taxonomy():
 
 
 def figure(upto):
-    body = []
-    for step, draw in zip(STEPS, [screen, otus, taxonomy]):
+    body = marker()
+    if upto == 'marker':
+        return body
+    body.append(f'<g transform="translate(0,{DY})">')
+    for step, draw in zip(STEPS[1:], [screen, otus, taxonomy]):
         body += draw()
         if step == upto:
             break
+    body.append('</g>')
     return body
 
 

@@ -21,7 +21,7 @@ CHECKM1_STEPS := $(foreach s,markers complete incomplete contaminated,$(BUILD)/m
 CHECKM2_STEPS := $(foreach s,complete incomplete contaminated,$(BUILD)/media/checkm2_$(s).svg)
 GUNC_STEPS    := $(foreach s,spread chimeric,$(BUILD)/media/gunc_$(s).svg)
 ANNOT_STEPS   := $(foreach s,genes database judgement,$(BUILD)/media/annotation_$(s).svg)
-SINGLEM_STEPS := $(foreach s,screen otus taxonomy,$(BUILD)/media/singlem_$(s).svg)
+SINGLEM_STEPS := $(foreach s,marker screen otus taxonomy,$(BUILD)/media/singlem_$(s).svg)
 $(CHECKM1_STEPS): $(BUILD)/media/%.svg: media/checkm1.py
 	@mkdir -p $(dir $@)
 	$(PYTHON) $< $@
