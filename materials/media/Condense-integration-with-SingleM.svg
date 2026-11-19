@@ -1,0 +1,1147 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="1774"
+   height="887"
+   viewBox="0 0 1774 887"
+   role="img"
+   aria-label="Condense · Integration with SingleM"
+   version="1.1"
+   id="svg76"
+   sodipodi:docname="Condense-integration-with-SingleM.svg"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview76"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.98421646"
+     inkscape:cx="886.49198"
+     inkscape:cy="443.5"
+     inkscape:window-width="1920"
+     inkscape:window-height="1111"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg76" />
+  <title
+     id="title1">Condense · Integration with SingleM</title>
+  <defs
+     id="defs6">
+    <marker
+       id="main"
+       viewBox="0 0 12 12"
+       refX="10"
+       refY="6"
+       markerWidth="17"
+       markerHeight="17"
+       markerUnits="userSpaceOnUse"
+       orient="auto">
+      <path
+         d="M0 0 L12 6 L0 12 Z"
+         fill="#653b94"
+         id="path1" />
+    </marker>
+    <marker
+       id="small"
+       viewBox="0 0 12 12"
+       refX="10"
+       refY="6"
+       markerWidth="13"
+       markerHeight="13"
+       markerUnits="userSpaceOnUse"
+       orient="auto">
+      <path
+         d="M0 0 L12 6 L0 12 Z"
+         fill="#653b94"
+         id="path2" />
+    </marker>
+    <marker
+       id="ink"
+       viewBox="0 0 12 12"
+       refX="10"
+       refY="6"
+       markerWidth="13"
+       markerHeight="13"
+       markerUnits="userSpaceOnUse"
+       orient="auto">
+      <path
+         d="M0 0 L12 6 L0 12 Z"
+         fill="#101a32"
+         id="path3" />
+    </marker>
+    <marker
+       id="orange"
+       viewBox="0 0 12 12"
+       refX="10"
+       refY="6"
+       markerWidth="15"
+       markerHeight="15"
+       markerUnits="userSpaceOnUse"
+       orient="auto">
+      <path
+         d="M0 0 L12 6 L0 12 Z"
+         fill="#d76509"
+         id="path4" />
+    </marker>
+    <pattern
+       id="orange-hatch"
+       width="12"
+       height="12"
+       patternUnits="userSpaceOnUse"
+       patternTransform="rotate(45)">
+      <rect
+         width="12"
+         height="12"
+         fill="#fff"
+         id="rect4" />
+      <path
+         d="M0 0V12"
+         stroke="#d76509"
+         stroke-width="5"
+         id="path5" />
+    </pattern>
+    <pattern
+       id="purple-hatch"
+       width="12"
+       height="12"
+       patternUnits="userSpaceOnUse"
+       patternTransform="rotate(45)">
+      <rect
+         width="12"
+         height="12"
+         fill="#fff"
+         id="rect5" />
+      <path
+         d="M0 0V12"
+         stroke="#8753b3"
+         stroke-width="5"
+         id="path6" />
+    </pattern>
+  </defs>
+  <rect
+     width="1774"
+     height="887"
+     fill="white"
+     id="rect6" />
+  <g
+     font-family="Liberation Sans, Arial, sans-serif"
+     id="g76">
+    <rect
+       x="65"
+       y="60"
+       width="1645"
+       height="82"
+       rx="24"
+       fill="#653b94"
+       stroke="none"
+       stroke-width="1"
+       id="rect7" />
+    <text
+       x="99"
+       y="115"
+       fill="#ffffff"
+       font-size="43px"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="start"
+       id="text7"><tspan
+         x="99"
+         id="tspan7">Step 3: Bringing the profile together</tspan></text>
+    <rect
+       x="66"
+       y="142"
+       width="1643"
+       height="688"
+       rx="21"
+       fill="#faf7fd"
+       stroke="#653b94"
+       stroke-width="3"
+       id="rect8" />
+    <rect
+       x="88"
+       y="176"
+       width="371"
+       height="627"
+       rx="18"
+       fill="#f3ecfa"
+       stroke="#653b94"
+       stroke-width="3.3"
+       id="rect9" />
+    <rect
+       x="107"
+       y="194"
+       width="119"
+       height="44"
+       rx="22"
+       fill="#653b94"
+       stroke="none"
+       stroke-width="1"
+       id="rect10" />
+    <text
+       x="166.5"
+       y="223"
+       fill="#fff"
+       font-size="25"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="middle"
+       id="text10"><tspan
+         x="166.5"
+         dy="0"
+         id="tspan10">Step 6</tspan></text>
+    <text
+       x="239"
+       y="224"
+       fill="#101a32"
+       font-size="30px"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="start"
+       id="text11"><tspan
+         x="239"
+         dy="0"
+         id="tspan11">Combine</tspan></text>
+    <rect
+       x="494"
+       y="176"
+       width="378"
+       height="627"
+       rx="18"
+       fill="#f3ecfa"
+       stroke="#653b94"
+       stroke-width="3.3"
+       id="rect11" />
+    <rect
+       x="513"
+       y="194"
+       width="119"
+       height="44"
+       rx="22"
+       fill="#653b94"
+       stroke="none"
+       stroke-width="1"
+       id="rect12" />
+    <text
+       x="572.5"
+       y="223"
+       fill="#fff"
+       font-size="25"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="middle"
+       id="text12"><tspan
+         x="572.5"
+         dy="0"
+         id="tspan12">Step 7</tspan></text>
+    <text
+       x="645"
+       y="224"
+       fill="#101a32"
+       font-size="30"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="start"
+       id="text13"><tspan
+         x="645"
+         dy="0"
+         id="tspan13">Compare</tspan></text>
+    <rect
+       x="906"
+       y="176"
+       width="387"
+       height="627"
+       rx="18"
+       fill="#f3ecfa"
+       stroke="#653b94"
+       stroke-width="3.3"
+       id="rect13" />
+    <rect
+       x="925"
+       y="194"
+       width="119"
+       height="44"
+       rx="22"
+       fill="#653b94"
+       stroke="none"
+       stroke-width="1"
+       id="rect14" />
+    <text
+       x="984.5"
+       y="223"
+       fill="#fff"
+       font-size="25"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="middle"
+       id="text14"><tspan
+         x="984.5"
+         dy="0"
+         id="tspan14">Step 8</tspan></text>
+    <text
+       x="1057"
+       y="224"
+       fill="#101a32"
+       font-size="30"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="start"
+       id="text15"><tspan
+         x="1057"
+         dy="0"
+         id="tspan15">Inject</tspan></text>
+    <rect
+       x="1328"
+       y="176"
+       width="362"
+       height="627"
+       rx="18"
+       fill="#f3ecfa"
+       stroke="#653b94"
+       stroke-width="3.3"
+       id="rect15" />
+    <rect
+       x="1347"
+       y="194"
+       width="119"
+       height="44"
+       rx="22"
+       fill="#653b94"
+       stroke="none"
+       stroke-width="1"
+       id="rect16" />
+    <text
+       x="1406.5"
+       y="223"
+       fill="#fff"
+       font-size="25"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="middle"
+       id="text16"><tspan
+         x="1406.5"
+         dy="0"
+         id="tspan16">Step 9</tspan></text>
+    <text
+       x="1479"
+       y="224"
+       fill="#101a32"
+       font-size="30"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="start"
+       id="text17"><tspan
+         x="1479"
+         dy="0"
+         id="tspan17">Output</tspan></text>
+    <path
+       d="M459 487 L491 487"
+       fill="none"
+       stroke="#653b94"
+       stroke-width="4"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       marker-end="url(#main)"
+       id="path17" />
+    <path
+       d="M872 487 L903 487"
+       fill="none"
+       stroke="#653b94"
+       stroke-width="4"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       marker-end="url(#main)"
+       id="path18" />
+    <path
+       d="M1293 487 L1325 487"
+       fill="none"
+       stroke="#653b94"
+       stroke-width="4"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       marker-end="url(#main)"
+       id="path19" />
+    <text
+       x="112"
+       y="275"
+       fill="#101a32"
+       font-size="25"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text20"><tspan
+         x="112"
+         dy="0"
+         id="tspan19">Build a consensus across</tspan><tspan
+         x="112"
+         dy="31"
+         id="tspan20">markers</tspan></text>
+    <circle
+       cx="167"
+       cy="380"
+       r="35"
+       fill="none"
+       stroke="#774aa5"
+       stroke-width="18"
+       id="circle20" />
+    <path
+       d="M135.28 394.79 A35 35 0 0 1 198.72 365.21"
+       fill="none"
+       stroke="#f58b16"
+       stroke-width="18"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path20" />
+    <circle
+       cx="370"
+       cy="380"
+       r="35"
+       fill="none"
+       stroke="#774aa5"
+       stroke-width="18"
+       id="circle21" />
+    <path
+       d="M338.28 394.79 A35 35 0 0 1 401.72 365.21"
+       fill="none"
+       stroke="#f58b16"
+       stroke-width="18"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path21" />
+    <text
+       x="268"
+       y="390"
+       fill="#101a32"
+       font-size="30"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="middle"
+       id="text21"><tspan
+         x="268"
+         dy="0"
+         id="tspan21">…</tspan></text>
+    <text
+       x="167"
+       y="455"
+       fill="#101a32"
+       font-size="23"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="middle"
+       id="text22"><tspan
+         x="167"
+         dy="0"
+         id="tspan22">Marker 1</tspan></text>
+    <text
+       x="370"
+       y="455"
+       fill="#101a32"
+       font-size="23"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="middle"
+       id="text23"><tspan
+         x="370"
+         dy="0"
+         id="tspan23">Marker 59</tspan></text>
+    <path
+       d="M168 480 L238 538"
+       fill="none"
+       stroke="#101a32"
+       stroke-width="3"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       marker-end="url(#ink)"
+       id="path23" />
+    <path
+       d="M271 480 L273 538"
+       fill="none"
+       stroke="#101a32"
+       stroke-width="3"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       marker-end="url(#ink)"
+       id="path24" />
+    <path
+       d="M369 480 L310 538"
+       fill="none"
+       stroke="#101a32"
+       stroke-width="3"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       marker-end="url(#ink)"
+       id="path25" />
+    <circle
+       cx="272"
+       cy="611"
+       r="53"
+       fill="none"
+       stroke="#774aa5"
+       stroke-width="25"
+       id="circle25" />
+    <path
+       d="M223.97 633.40 A53 53 0 0 1 320.03 588.60"
+       fill="none"
+       stroke="#f58b16"
+       stroke-width="25"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path26" />
+    <text
+       x="119"
+       y="714"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text27"><tspan
+         x="119"
+         dy="0"
+         id="tspan26">One marker-based profile</tspan><tspan
+         x="119"
+         dy="30"
+         id="tspan27">per sample</tspan></text>
+    <text
+       x="119"
+       y="775"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text28"><tspan
+         x="119"
+         dy="0"
+         id="tspan28">EM over marker OTUs</tspan></text>
+    <text
+       x="520"
+       y="275"
+       fill="#101a32"
+       font-size="25"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text30"><tspan
+         x="520"
+         dy="0"
+         id="tspan29">Compare species detected</tspan><tspan
+         x="520"
+         dy="31"
+         id="tspan30">by each tool</tspan></text>
+    <text
+       x="611"
+       y="359"
+       fill="#096a67"
+       font-size="27"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="middle"
+       id="text31"><tspan
+         x="611"
+         dy="0"
+         id="tspan31">SingleM</tspan></text>
+    <text
+       x="770"
+       y="359"
+       fill="#a84604"
+       font-size="27"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="middle"
+       id="text32"><tspan
+         x="770"
+         dy="0"
+         id="tspan32">Weebill</tspan></text>
+    <circle
+       cx="638"
+       cy="461"
+       r="86"
+       fill="#168177"
+       fill-opacity=".19"
+       stroke="#096a67"
+       stroke-width="4"
+       id="circle32" />
+    <circle
+       cx="735"
+       cy="461"
+       r="86"
+       fill="#d76509"
+       fill-opacity=".19"
+       stroke="#b5530d"
+       stroke-width="4"
+       id="circle33" />
+    <text
+       x="687"
+       y="467"
+       fill="#101a32"
+       font-size="23"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="middle"
+       id="text33"><tspan
+         x="687"
+         dy="0"
+         id="tspan33">Both</tspan></text>
+    <text
+       x="520"
+       y="588"
+       fill="#101a32"
+       font-size="26"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="start"
+       id="text34"><tspan
+         x="520"
+         dy="0"
+         id="tspan34">SingleM detections</tspan></text>
+    <text
+       x="520"
+       y="617"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text36"><tspan
+         x="520"
+         dy="0"
+         id="tspan35">Keep SingleM coverage</tspan><tspan
+         x="520"
+         dy="30"
+         id="tspan36">estimates</tspan></text>
+    <text
+       x="520"
+       y="702"
+       fill="#a84604"
+       font-size="25"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="start"
+       id="text37"><tspan
+         x="520"
+         dy="0"
+         id="tspan37">Weebill-only detections</tspan></text>
+    <text
+       x="520"
+       y="732"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text39"><tspan
+         x="520"
+         dy="0"
+         id="tspan38">Add species using Weebill</tspan><tspan
+         x="520"
+         dy="30"
+         id="tspan39">coverage on the SingleM scale</tspan></text>
+    <text
+       x="932"
+       y="273"
+       fill="#101a32"
+       font-size="25"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text40"><tspan
+         x="932"
+         dy="0"
+         id="tspan40">Add Weebill-only species</tspan></text>
+    <path
+       d="M1094 325 L996 400"
+       fill="none"
+       stroke="#71868a"
+       stroke-width="4"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path40" />
+    <circle
+       cx="996"
+       cy="400"
+       r="17"
+       fill="#71868a"
+       stroke="none"
+       stroke-width="1"
+       id="circle40" />
+    <path
+       d="M1094 325 L1094 400"
+       fill="none"
+       stroke="#71868a"
+       stroke-width="4"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path41" />
+    <circle
+       cx="1094"
+       cy="400"
+       r="17"
+       fill="#71868a"
+       stroke="none"
+       stroke-width="1"
+       id="circle41" />
+    <path
+       d="M1094 325 L1192 400"
+       fill="none"
+       stroke="#d76509"
+       stroke-width="4"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path42" />
+    <circle
+       cx="1192"
+       cy="400"
+       r="17"
+       fill="#d76509"
+       stroke="none"
+       stroke-width="1"
+       id="circle42" />
+    <circle
+       cx="1094"
+       cy="325"
+       r="17"
+       fill="#71868a"
+       stroke="none"
+       stroke-width="1"
+       id="circle43" />
+    <text
+       x="1134"
+       y="329"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text43"><tspan
+         x="1134"
+         dy="0"
+         id="tspan43">genus</tspan></text>
+    <text
+       x="996"
+       y="444"
+       fill="#101a32"
+       font-size="22"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="middle"
+       id="text44"><tspan
+         x="996"
+         dy="0"
+         id="tspan44">A</tspan></text>
+    <text
+       x="1094"
+       y="444"
+       fill="#101a32"
+       font-size="22"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="middle"
+       id="text45"><tspan
+         x="1094"
+         dy="0"
+         id="tspan45">B</tspan></text>
+    <text
+       x="1206"
+       y="444"
+       fill="#a84604"
+       font-size="22"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="middle"
+       id="text46"><tspan
+         x="1206"
+         dy="0"
+         id="tspan46">Weebill-only</tspan></text>
+    <text
+       x="932"
+       y="499"
+       fill="#101a32"
+       font-size="26"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="start"
+       id="text47"><tspan
+         x="932"
+         dy="0"
+         id="tspan47">Coverage</tspan></text>
+    <text
+       x="928"
+       y="541"
+       fill="#101a32"
+       font-size="21"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text48"><tspan
+         x="928"
+         dy="0"
+         id="tspan48">Before</tspan></text>
+    <rect
+       x="1000"
+       y="519"
+       width="104"
+       height="32"
+       rx="0"
+       fill="#7546a4"
+       stroke="none"
+       stroke-width="1"
+       id="rect48" />
+    <text
+       x="928"
+       y="590"
+       fill="#101a32"
+       font-size="21"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text49"><tspan
+         x="928"
+         dy="0"
+         id="tspan49">After</tspan></text>
+    <rect
+       x="1000"
+       y="568"
+       width="104"
+       height="32"
+       rx="0"
+       fill="#7546a4"
+       stroke="none"
+       stroke-width="1"
+       id="rect49" />
+    <rect
+       x="1104"
+       y="519"
+       width="103"
+       height="32"
+       rx="0"
+       fill="url(#purple-hatch)"
+       stroke="#8753b3"
+       stroke-width="1"
+       id="rect50" />
+    <rect
+       x="1104"
+       y="568"
+       width="103"
+       height="32"
+       rx="0"
+       fill="#d76509"
+       stroke="none"
+       stroke-width="1"
+       id="rect51" />
+    <rect
+       x="1207"
+       y="568"
+       width="66"
+       height="32"
+       rx="0"
+       fill="#f4a566"
+       stroke="none"
+       stroke-width="1"
+       id="rect52" />
+    <path
+       d="M1207 503 L1207 624"
+       fill="none"
+       stroke="#101a32"
+       stroke-width="1.7"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       stroke-dasharray="6 5"
+       id="path52" />
+    <path
+       d="M1001 618 L1095 618"
+       fill="none"
+       stroke="#101a32"
+       stroke-width="2"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path53" />
+    <path
+       d="M1008 614 L1001 618 L1008 622 M1088 614 L1095 618 L1088 622"
+       fill="none"
+       stroke="#101a32"
+       stroke-width="1.8"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path54" />
+    <path
+       d="M1104 618 L1201 618"
+       fill="none"
+       stroke="#101a32"
+       stroke-width="2"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path55" />
+    <path
+       d="M1111 614 L1104 618 L1111 622 M1194 614 L1201 618 L1194 622"
+       fill="none"
+       stroke="#101a32"
+       stroke-width="1.8"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path56" />
+    <path
+       d="M1214 618 L1272 618"
+       fill="none"
+       stroke="#101a32"
+       stroke-width="2"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path57" />
+    <path
+       d="M1221 614 L1214 618 L1221 622 M1265 614 L1272 618 L1265 622"
+       fill="none"
+       stroke="#101a32"
+       stroke-width="1.8"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path58" />
+    <text
+       x="1048"
+       y="646"
+       fill="#101a32"
+       font-size="17"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="middle"
+       id="text58"><tspan
+         x="1048"
+         dy="0"
+         id="tspan58">resolved</tspan></text>
+    <text
+       x="1153"
+       y="646"
+       fill="#101a32"
+       font-size="17"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="middle"
+       id="text60"><tspan
+         x="1153"
+         dy="0"
+         id="tspan59">injection</tspan><tspan
+         x="1153"
+         dy="21"
+         id="tspan60">(from unresolved)</tspan></text>
+    <text
+       x="1244"
+       y="644"
+       fill="#101a32"
+       font-size="17"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="middle"
+       id="text61"><tspan
+         x="1244"
+         dy="0"
+         id="tspan61">Excess</tspan></text>
+    <text
+       x="932"
+       y="716"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text64"><tspan
+         x="932"
+         dy="0"
+         id="tspan62">Draw from unresolved ancestor</tspan><tspan
+         x="932"
+         dy="30"
+         id="tspan63">coverage first. Any excess adds</tspan><tspan
+         x="932"
+         dy="30"
+         id="tspan64">new coverage.</tspan></text>
+    <text
+       x="1350"
+       y="273"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text65"><tspan
+         x="1350"
+         dy="0"
+         id="tspan65">Per-sample taxonomic profile</tspan></text>
+    <rect
+       x="1350"
+       y="318"
+       width="323"
+       height="156"
+       rx="4"
+       fill="#f6f0fb"
+       stroke="#d9cbea"
+       stroke-width="1"
+       id="rect65" />
+    <rect
+       x="1351"
+       y="319"
+       width="321"
+       height="55"
+       rx="3"
+       fill="#e8dbf3"
+       stroke="none"
+       stroke-width="1"
+       id="rect66" />
+    <text
+       x="1361"
+       y="353"
+       fill="#101a32"
+       font-size="23"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="start"
+       id="text66"><tspan
+         x="1361"
+         dy="0"
+         id="tspan66">Taxon</tspan></text>
+    <text
+       x="1662"
+       y="353"
+       fill="#101a32"
+       font-size="23"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="end"
+       id="text67"><tspan
+         x="1662"
+         dy="0"
+         id="tspan67">Coverage</tspan></text>
+    <path
+       d="M1351 424 L1672 424"
+       fill="none"
+       stroke="#d9cbea"
+       stroke-width="1"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path67" />
+    <text
+       x="1362"
+       y="410"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="italic"
+       text-anchor="start"
+       id="text68"><tspan
+         x="1362"
+         dy="0"
+         id="tspan68">E. coli</tspan></text>
+    <text
+       x="1615"
+       y="410"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="middle"
+       id="text69"><tspan
+         x="1615"
+         dy="0"
+         id="tspan69">12</tspan></text>
+    <text
+       x="1362"
+       y="455"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="italic"
+       text-anchor="start"
+       id="text70"><tspan
+         x="1362"
+         dy="0"
+         id="tspan70">Yersinia sp.</tspan></text>
+    <text
+       x="1615"
+       y="455"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="middle"
+       id="text71"><tspan
+         x="1615"
+         dy="0"
+         id="tspan71">4</tspan></text>
+    <text
+       x="1350"
+       y="532"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="start"
+       id="text72"><tspan
+         x="1350"
+         dy="0"
+         id="tspan72">Relative abundance</tspan></text>
+    <rect
+       x="1350"
+       y="553"
+       width="242.25"
+       height="40"
+       rx="0"
+       fill="#653b94"
+       stroke="none"
+       stroke-width="1"
+       id="rect72" />
+    <rect
+       x="1592.25"
+       y="553"
+       width="80.75"
+       height="40"
+       rx="0"
+       fill="#ad8bcc"
+       stroke="none"
+       stroke-width="1"
+       id="rect73" />
+    <text
+       x="1471.125"
+       y="629"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="middle"
+       id="text73"><tspan
+         x="1471.125"
+         dy="0"
+         id="tspan73">75%</tspan></text>
+    <text
+       x="1632.625"
+       y="629"
+       fill="#101a32"
+       font-size="24"
+       font-weight="400"
+       font-style="normal"
+       text-anchor="middle"
+       id="text74"><tspan
+         x="1632.625"
+         dy="0"
+         id="tspan74">25%</tspan></text>
+    <text
+       x="1353"
+       y="717"
+       fill="#462870"
+       font-size="26"
+       font-weight="700"
+       font-style="normal"
+       text-anchor="start"
+       id="text76"><tspan
+         x="1353"
+         dy="0"
+         id="tspan75">SingleM species plus</tspan><tspan
+         x="1353"
+         dy="32"
+         id="tspan76">Weebill-only detections</tspan></text>
+  </g>
+</svg>

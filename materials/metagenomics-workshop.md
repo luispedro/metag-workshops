@@ -320,6 +320,35 @@ TODO: FASTQ format; how many reads and bases of each kind; read lengths.
 
 # Step 2: Read quality control
 
+## Why check the reads? {.lecture}
+
+- Raw reads are not all usable: adapters, low-quality ends, very short
+  reads, reads full of `N`s
+- Errors in the reads end up in the assembly, the bins and the genes
+  ("garbage in, garbage out")
+- What we do:
+    - **Trim** adapters and low-quality ends
+    - **Filter** out reads that are too short or too poor
+    - **Report**: is this run good enough to go on with?
+
+::: handout
+Quality control has two purposes. The first is to clean the reads: adapter
+sequences (left when the DNA fragment is shorter than the read) and
+low-quality bases do not come from the genomes in the sample, and they make
+assembly, mapping and profiling harder. The second, often more important, is
+to look at the data before spending hours on them: how many reads and bases
+there are, how long and how accurate they are, and whether anything went
+wrong during sequencing.
+
+Short and long reads need different checks. Illumina reads all have about the
+same length and fail mostly at their ends, so we trim adapters and
+low-quality tails. Nanopore reads vary from a few hundred bases to tens of
+kilobases, and their accuracy varies from read to read, so we mostly look at
+the length and quality distributions and drop the shortest reads. We use
+fastp for the short reads and fastplong, from the same authors, for the long
+reads; both write an HTML report.
+:::
+
 ## 2.1: Short reads (fastp)
 
 ```bash
@@ -373,6 +402,120 @@ fit for use.
 
 # Step 3: Read-based taxonomic profiling (SingleM)
 
+## Why look at the reads directly? {.lecture}
+
+::: slides
+![](media/unassembled){width="85%"}
+
+Not all reads end up in a good MAG: profile the reads too, to see the whole
+community.
+:::
+
+::: handout
+![Why not all reads end up in a MAG. An abundant genome is covered many times
+over, and assembles. A rare one is covered too thinly: the assembly has gaps,
+and its contigs are too short to bin. Strains of the same species (and repeats
+within a genome) are almost identical, and the assembly breaks where they
+differ. Eukaryotes often have genomes too large to cover, and most binning
+and QC tools are made for prokaryotes.](media/unassembled){width="85%"}
+
+Despite our best efforts, not all reads in a metagenome end up in
+good-quality genomes. So it is useful to analyse the reads directly, to get a
+sense of the whole community while we recover MAGs from it, and later to see
+how much of it the MAGs capture (Step 11). Genome recovery fails when:
+
+- the **coverage is too low**: a rare organism contributes too few reads to
+  assemble;
+- there is **strain heterogeneity**, or **repeats**: near-identical sequences
+  make the assembly graph branch, and the assembler stops at each branch;
+- the reads are **eukaryotic**: their genomes are often large and rich in
+  repeats, and most binning and QC tools are made for bacteria and archaea.
+:::
+
+## Three ways to profile a community {.lecture}
+
+::: slides
+![](media/profiling){width="85%"}
+
+SingleM uses single-copy marker genes (more on these in MAG QC); its next
+version will also use k-mers.
+:::
+
+::: handout
+![Three ways to profile a community from its reads: count the reads from a
+few marker genes; cut each read into k-mers and look them up in a database of
+the k-mers of reference genomes; or align each read to whole reference
+genomes.](media/profiling){width="85%"}
+
+There are three main strategies for community profiling:
+
+1. **Marker genes** (SingleM, MetaPhlAn, mOTUs, Kaiju, …): only the reads
+   from a set of chosen genes are used. The database is small, and each
+   marker gene says how many cells there are, whatever the size of their
+   genome.
+2. **Matching k-mers** (Kraken, Sylph, …): each read (or the whole sample) is
+   cut into short words, k-mers, looked up in a database of the k-mers of
+   reference genomes. Fast, and uses all the reads, but needs the genome of
+   a close relative in the database.
+3. **Mapping** (CoverM, minimap2, …): reads are aligned to whole reference
+   genomes, for example to our own MAGs. The most precise, but it only sees
+   what is in the references.
+
+The current version of SingleM uses single-copy marker genes (see
+[Single-copy marker genes](#single-copy-marker-genes) in MAG QC), but the
+next version will also use k-mers.
+:::
+
+## How SingleM works {.lecture}
+
+::: slides
+:::: r-stack
+::::: {.fragment .fade-out data-fragment-index="1"}
+![](media/singlem_screen.svg)
+:::::
+::::: {.fragment .fade-in-then-out data-fragment-index="1"}
+![](media/singlem_otus.svg)
+:::::
+::::: {.fragment .fade-in data-fragment-index="2"}
+![](media/singlem_taxonomy.svg)
+:::::
+::::
+:::
+
+::: handout
+![How SingleM works: (1) find the few reads that cover the 20 amino-acid
+window of a marker gene; (2) align them to the marker's HMM, cut out the
+window, and group reads with the same window sequence into OTUs; (3) give each
+OTU a taxonomy, the species if a GTDB genome is close enough, else a higher
+rank. The outputs are an OTU table and a taxonomic
+profile.](media/singlem){width="90%"}
+
+SingleM looks only at 59 single-copy marker genes, and within each, only at
+a short window of 20 amino acids (60 bases), chosen because it is conserved
+enough to find but varies enough to tell taxa apart:
+
+1. **Screen**: DIAMOND (BLASTX) compares the reads with the marker proteins
+   around their windows, to find the few reads that cover a window.
+2. **Group into OTUs**: the reads found are aligned to the marker's HMM, and
+   their window sequence is cut out. Reads that do not cover the whole window
+   are dropped; reads with the same window sequence form an OTU (operational
+   taxonomic unit).
+3. **Taxonomy**: each OTU is compared with the windows of GTDB genomes. A
+   close match gives the species; otherwise, DIAMOND gives a less precise
+   taxonomy (genus or higher).
+
+The outputs are:
+
+- the **OTU table** (`--otu-table`): for each marker, its OTUs, their window
+  sequence, number of reads, coverage and taxonomy;
+- the **taxonomic profile** (`-p`): the coverage of each taxon in the sample,
+  a consensus of the OTUs of all the markers.
+
+Because every genome has each marker exactly once, counting markers counts
+cells, not bases: a profile from SingleM does not favour organisms with large
+genomes.
+:::
+
 ## 3.1: Short reads
 
 ```bash
@@ -420,11 +563,6 @@ short-read one, `03_SINGLEM/sr.profile.html`:
 - Do the two technologies see the same taxa, in similar proportions?
 - Which differences could come from the technology, and which from the amount
   of data?
-
-::: instructor
-TODO: background on SingleM (marker genes, OTU tables, GTDB), and why a
-read-based profile sees organisms that assembly misses.
-:::
 
 # Assembly, polishing and binning
 
