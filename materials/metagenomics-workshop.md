@@ -562,51 +562,53 @@ genomes.
 
 ## Output 1: the OTU table {.lecture}
 
-One row per **OTU**: a window sequence found in one marker gene
-(`sr.otu.tsv`, 880 rows; sequences and taxonomy shortened here):
+One row per **marker × sequence** (`sr.otu.tsv`, shortened):
 
 ```{.no-cue}
-gene                      sample  sequence         num_hits  coverage  taxonomy
-S3.1.ribosomal_..._rplB   sr_R1   GAGCTGAAGGCC…    21        34.62     Root; …; g__DATFES01; s__DATFES01 sp035457725
-S3.1.ribosomal_..._rplB   sr_R1   GAGATGCTGCCG…    1         1.65      Root; …; c__Gammaproteobacteria; o__Burkholderiales
-S3.2.ribosomal_..._rplC   sr_R1   GTCGACGTCGCC…    9         14.84     Root; …; g__DATFES01; s__DATFES01 sp035457725
-S3.3.ribosomal_..._rplN   sr_R1   GCTGCGGTGCTC…    15        24.73     Root; …; g__DATFES01; s__DATFES01 sp035457725
-S3.6.ribosomal_protein_S5 sr_R1   GGAACCGGGATC…    27        44.51     Root; …; g__DATFES01; s__DATFES01 sp035457725
-S3.7.ribosomal_protein_S7 sr_R1   TATCAAGTGCCG…    17        28.02     Root; …; g__DATFES01; s__DATFES01 sp035457725
+gene                      sample  sequence       num_hits  coverage  taxonomy
+S3.1.ribosomal_..._rplB   sr_R1   GAGCTGAAGGCC…  21        34.62     …; s__DATFES01 sp035457725
+S3.1.ribosomal_..._rplB   sr_R1   GAGATGCTGCCG…  1         1.65      …; o__Burkholderiales
+S3.2.ribosomal_..._rplC   sr_R1   GTCGACGTCGCC…  9         14.84     …; s__DATFES01 sp035457725
+S3.6.ribosomal_protein_S5 sr_R1   GGAACCGGGATC…  27        44.51     …; s__DATFES01 sp035457725
 …
 ```
 
-- The same species appears **many times**: once per marker (here 36 of the
-  markers), sometimes in several OTUs per marker (sequencing errors, strains)
-- Each OTU's coverage is noisy (1 read = 1.65×), and its taxonomy can stop at
-  any rank
-- Keeps the **sequences**: input for `singlem appraise` (step 11) and for
-  comparing samples at the sequence level
+- One species, **many rows** (one or more per marker)
+- Keeps the **sequences**
+
+::: handout
+`sr.otu.tsv` has 880 rows. DATFES01 sp035457725 appears in 36 of the
+markers, sometimes as several OTUs per marker (sequencing errors, strains).
+Each OTU's coverage is noisy (one read is 1.65× here), and its taxonomy can
+stop at any rank. Because it keeps the sequences, the OTU table is the input
+of `singlem appraise` (step 11) and can be used to compare samples at the
+sequence level.
+:::
 
 ## Output 2: the taxonomic profile {.lecture}
 
-One row per **taxon**: the OTUs of all the markers combined
-(`sr.profile.tsv`, 40 rows):
+One row per **taxon** (`sr.profile.tsv`, shortened):
 
 ```{.no-cue}
 sample  coverage  taxonomy
 sr_R1   5.98      Root; d__Bacteria
 sr_R1   2.27      Root; d__Bacteria; p__Pseudomonadota; c__Alphaproteobacteria
-sr_R1   0.17      Root; d__Bacteria; p__Pseudomonadota; c__Alphaproteobacteria; o__CACIAM-22H2; f__CACIAM-22H2
-sr_R1   0.8       Root; d__Bacteria; p__Pseudomonadota; c__Alphaproteobacteria; o__CACIAM-22H2; f__CACIAM-22H2; g__DATFES01
-sr_R1   27.56     Root; d__Bacteria; p__Pseudomonadota; c__Alphaproteobacteria; o__CACIAM-22H2; f__CACIAM-22H2; g__DATFES01; s__DATFES01 sp035457725
+sr_R1   0.8       Root; d__Bacteria; …; f__CACIAM-22H2; g__DATFES01
+sr_R1   27.56     Root; d__Bacteria; …; g__DATFES01; s__DATFES01 sp035457725
 …
 ```
 
-- No genes, no sequences: DATFES01 sp035457725 is now **one row**, with one
-  coverage (27.56×), a consensus of its OTUs across markers
-- Coverage is **not cumulative**: `d__Bacteria` 5.98 is what could be placed
-  only as far as Bacteria, not all Bacteria; add a taxon's row and all rows
-  below it for its total
-- The coverages sum to the coverage of the whole community (84.91× here);
-  this is what Krona draws
+- One species, **one row**: no genes, no sequences
+- Coverage is **not cumulative**
 
 ::: handout
+`sr.profile.tsv` has 40 rows. DATFES01 sp035457725 now has one coverage
+(27.56×), a consensus of its OTUs across markers. The coverage of a row is
+what could be placed only as far as that rank: `d__Bacteria` 5.98 is not all
+Bacteria. A taxon's total is its row plus all the rows below it, and all the
+rows add up to the coverage of the whole community (84.91× here), which is
+what Krona draws.
+
 In short: the OTU table is *per marker gene and sequence*, the raw evidence;
 the taxonomic profile is *per taxon*, the summary. Use the profile to answer
 "who is there, and how much?"; use the OTU table when you need the sequences,
